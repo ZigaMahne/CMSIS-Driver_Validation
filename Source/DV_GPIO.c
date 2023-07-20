@@ -79,6 +79,32 @@ static void DriverInit (void) {
 /*-----------------------------------------------------------------------------
  *      Tests
  *----------------------------------------------------------------------------*/
+
+/*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
+/**
+\defgroup dv_gpio GPIO Validation
+\brief GPIO driver validation
+\details
+The GPIO validation test performs the following checks:
+- API interface compliance.
+- Functional settings.
+- Event signaling.
+
+To perform GPIO validation tests, it is required to select two pins:
+- Pin under test: pin to be tested
+- Auxiliary Pin: pin with serial low resistance resistor connected to Pin under test (Suggested resistance of this resistor is around 1 kOhm)
+
+\image html gpio_loopback.png
+
+\note
+ - Pins (Pin under test and Auxiliary Pin) should not have any external resistors or any external devices connected to it.
+
+\defgroup gpio_tests Tests
+\ingroup dv_gpio
+
+@{
+*/
+
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
 /**
 \brief  Function: GPIO_Setup

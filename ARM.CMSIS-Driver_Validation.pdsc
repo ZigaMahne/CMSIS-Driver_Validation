@@ -150,7 +150,7 @@
         #define RTE_CMSIS_DV_GPIO        /* Driver Validation GPIO enabled */
       </RTE_Components_h>
       <files>
-        <!-- <file category="doc"    name="documentation/html/group__dv__i2c.html" /> -->
+        <file category="doc"    name="Documentation/html/group__dv__gpio.html" />
         <file category="header" name="Config/DV_GPIO_Config.h" attr="config" version = "1.0.0"/>
         <file category="source" name="Source/DV_GPIO.c"/>
       </files>
