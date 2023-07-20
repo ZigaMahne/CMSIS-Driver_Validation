@@ -73,8 +73,7 @@ static void PinDisable (ARM_GPIO_Pin_t pin) {
 static void DriverInit (void) {
 
   drv->Setup(GPIO_PIN_UNDER_TEST, NULL);
-  drv->Setup(GPIO_PIN_LOWER, NULL);
-  drv->Setup(GPIO_PIN_HIGHER, NULL);
+  drv->Setup(GPIO_PIN_AUX, NULL);
 }
 
 /*-----------------------------------------------------------------------------
@@ -84,9 +83,9 @@ static void DriverInit (void) {
 /**
 \brief  Function: GPIO_Setup
 \details
-The test Setup \b GPIO_setup verifies the GPIO functions with the sequence:
-  - \b Setup without callback
-  - \b Setup with callback
+The function \b GPIO_Setup verifies the GPIO functions in the following order:
+  - Setup without callback
+  - Setup with callback
 */
 void GPIO_Setup (void) {
   int32_t ret;
@@ -109,11 +108,11 @@ void GPIO_Setup (void) {
 /**
 \brief  Function: GPIO_SetDirection
 \details
-The test Direction \b GPIO_SetDirection verifies the GPIO direction with the sequence:
-  - \b Setup
-  - \b Set Direction parameter error
-  - \b Set pin as Output
-  - \b Set pin as Input
+The function \b GPIO_SetDirection verifies the GPIO direction in the following order:
+  - Setup
+  - Set Direction parameter error
+  - Set pin as Output
+  - Set pin as Input
 */
 void GPIO_SetDirection (void) {
 
@@ -134,11 +133,11 @@ void GPIO_SetDirection (void) {
 /**
 \brief  Function: GPIO_SetOutputMode
 \details
-The test OutputMode \b GPIO_SetOutputMode verifies the GPIO OutputMode with the sequence:
-  - \b Setup
-  - \b Set OutputMode parameter error
-  - \b Set pin as Push-Pull
-  - \b Set pin as Open-Drain
+The function \b GPIO_SetOutputMode verifies the GPIO OutputMode in the following order:
+  - Setup
+  - Set OutputMode parameter error
+  - Set pin as Push-Pull
+  - Set pin as Open-Drain
 */
 void GPIO_SetOutputMode (void) {
 
@@ -159,12 +158,12 @@ void GPIO_SetOutputMode (void) {
 /**
 \brief  Function: GPIO_SetPullResistor
 \details
-The test Pull Resistor \b GPIO_SetPullResistor verifies the GPIO Pull Resistor seting with the sequence:
-  - \b Setup
-  - \b Set PullResistor parameter error
-  - \b Set no Pull-Down/Up resistor (Disabled)
-  - \b Set Pull-Down resistor
-  - \b Set Pull-Up resistor
+The function \b GPIO_SetPullResistor verifies the GPIO Pull Resistor setings in the following order:
+  - Setup
+  - Set PullResistor parameter error
+  - Set no Pull-Down/Up resistor (Disabled)
+  - Set Pull-Down resistor
+  - Set Pull-Up resistor
 */
 void GPIO_SetPullResistor (void) {
 
@@ -188,15 +187,28 @@ void GPIO_SetPullResistor (void) {
 /**
 \brief  Function: GPIO_SetEventTrigger
 \details
-The test Trigger Rising Edge \b GPIO_SetEventTrigger verifies the GPIO Trigger with the sequence:
-  - \b Setup
-  - \b Set Trigger parameter error
-  - \b Set Rising Edge trigger
-  - \b Set Falling Edge trigger
-  - \b Set Either Edge trigger
-
+The function \b GPIO_SetEventTrigger verifies the GPIO Trigger setings in the following order:
+  - Setup
+  - Set Trigger parameter error
+  - Set Rising Edge trigger
+  - Set Falling Edge trigger
+  - Set Either Edge trigger
+  - Setup pins
+  - Set Rising Edge trigger
+  - Trigger Rising Edge with external low resistor
+  - Set Falling Edge trigger
+  - Trigger Falling Edge with external low resistor
+  - Set Either Edge trigger
+  - Trigger Either Edge with external low resistor
+  - Set Trigger None
+  - Trigger Rising/Falling Edge with external low resistor
+  - Set Either Edge trigger
+  - Disable IRQ
+  - Trigger Either Edge with external low resistor
+  - Enable IRQ
 */
 void GPIO_SetEventTrigger (void) {
+  int32_t ret;
 
   /* Setup without callback */
   TEST_ASSERT(drv->Setup(GPIO_PIN_UNDER_TEST, NULL) == ARM_DRIVER_OK);
@@ -212,34 +224,11 @@ void GPIO_SetEventTrigger (void) {
 
   /* Set Either Edge trigger */
   TEST_ASSERT(drv->SetEventTrigger(GPIO_PIN_UNDER_TEST, ARM_GPIO_TRIGGER_EITHER_EDGE) == ARM_DRIVER_OK);
-}
-
-/*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
-/**
-\brief  Function: SetEventTrigger
-\details
-The test Trigger Rising Edge \b SetEventTrigger verifies the GPIO Trigger with the sequence:
-  - \b Setup pins
-  - \b Set Rising Edge trigger
-  - \b Trigger Rising Edge with external resistor
-  - \b Set Falling Edge trigger
-  - \b Trigger Falling Edge with external resistor
-  - \b Set Either Edge trigger
-  - \b Trigger Either Edge with external resistor
-  - \b Set Trigger None
-  - \b Trigger Rising/Falling Edge with external resistor
-  - \b Set Either Edge trigger
-  - \b Disable IRQ
-  - \b Trigger Either Edge with external resistor
-  - \b Enable IRQ
-*/
-void SetEventTrigger (void) {
-  int32_t ret;
 
   /* Setup pins */
   DriverInit();
 
-  PinPull(GPIO_PIN_LOWER, 0U);
+  PinPull(GPIO_PIN_AUX, 0U);
 
   GPIO_Event = 0U;
   GPIO_Pin   = 0U;
@@ -248,8 +237,8 @@ void SetEventTrigger (void) {
   /* Set Rising Edge trigger */
   TEST_ASSERT(drv->SetEventTrigger(GPIO_PIN_UNDER_TEST, ARM_GPIO_TRIGGER_RISING_EDGE) == ARM_DRIVER_OK);
 
-  /* Trigger Rising Edge with external resistor */
-  PinPull(GPIO_PIN_LOWER, 1U);
+  /* Trigger Rising Edge with external low resistor */
+  PinPull(GPIO_PIN_AUX, 1U);
 
   osDelay(100);
 
@@ -269,8 +258,8 @@ void SetEventTrigger (void) {
   /* Set Falling Edge trigger */
   TEST_ASSERT(drv->SetEventTrigger(GPIO_PIN_UNDER_TEST, ARM_GPIO_TRIGGER_FALLING_EDGE) == ARM_DRIVER_OK);
 
-  /* Trigger Falling Edge with external resistor */
-  PinPull(GPIO_PIN_LOWER, 0U);
+  /* Trigger Falling Edge with external low resistor */
+  PinPull(GPIO_PIN_AUX, 0U);
 
   osDelay(100);
 
@@ -290,8 +279,8 @@ void SetEventTrigger (void) {
   /* Set Either Edge trigger */
   TEST_ASSERT(drv->SetEventTrigger(GPIO_PIN_UNDER_TEST, ARM_GPIO_TRIGGER_EITHER_EDGE) == ARM_DRIVER_OK);
 
-  /* Trigger Rising Edge with external resistor */
-  PinPull(GPIO_PIN_LOWER, 1U);
+  /* Trigger Rising Edge with external low resistor */
+  PinPull(GPIO_PIN_AUX, 1U);
 
   osDelay(100);
 
@@ -309,8 +298,8 @@ void SetEventTrigger (void) {
   GPIO_Pin   = 0U;
   IRQ_cnt    = 0U;
 
-  /* Trigger Falling Edge with external resistor */
-  PinPull(GPIO_PIN_LOWER, 0U);
+  /* Trigger Falling Edge with external low resistor */
+  PinPull(GPIO_PIN_AUX, 0U);
 
   osDelay(100);
 
@@ -331,9 +320,9 @@ void SetEventTrigger (void) {
   /* Set None trigger */
   TEST_ASSERT(drv->SetEventTrigger(GPIO_PIN_UNDER_TEST, ARM_GPIO_TRIGGER_NONE) == ARM_DRIVER_OK);
 
-  /* Trigger Rising/Falling Edge with external resistor */
-  PinPull(GPIO_PIN_LOWER, 1U);
-  PinPull(GPIO_PIN_LOWER, 0U);
+  /* Trigger Rising/Falling Edge with external low resistor */
+  PinPull(GPIO_PIN_AUX, 1U);
+  PinPull(GPIO_PIN_AUX, 0U);
 
   osDelay(100);
 
@@ -355,9 +344,9 @@ void SetEventTrigger (void) {
 
   __disable_irq();
 
-  /* Trigger Rising Edge with external resistor */
-  PinPull(GPIO_PIN_LOWER, 1U);
-  PinPull(GPIO_PIN_LOWER, 0U);
+  /* Trigger Rising Edge with external low resistor */
+  PinPull(GPIO_PIN_AUX, 1U);
+  PinPull(GPIO_PIN_AUX, 0U);
 
   __enable_irq();
 
@@ -377,33 +366,26 @@ void SetEventTrigger (void) {
   drv->SetEventTrigger(GPIO_PIN_UNDER_TEST, ARM_GPIO_TRIGGER_NONE);
 
   /* Disable pin */
-  PinDisable(GPIO_PIN_LOWER);
+  PinDisable(GPIO_PIN_AUX);
 }
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
 /**
-\brief  Function: SetOutput
+\brief  Function: GPIO_SetOutput
 \details
-The test Output Level \b SetOutput verifies the GPIO output with the sequence:
-  - \b Setup pins
-  - \b Set pin as Output
-  - \b Set pin as Push-Pull
-  - \b Set Output level LO
-  - \b Get Output level
-  - \b Set Output level HI
-  - \b Get Output level
-
-  - \b Set pin as Open-Drain
-  - \b Set Output level LO
-  - \b Get Output level
-  - \b Set Output level HI
-  - \b External high resistor as Pull-Up
-  - \b Get Output level
-  - \b Set Output level LO
-  - \b External low resistor as Pull-Down
-  - \b Get Output level
+The function \b GPIO_SetOutput verifies the GPIO output modes in the following order:
+  - Setup pins
+  - Set pin as Output
+  - Set pin as Push-Pull
+  - Set Output level LO
+  - Get Output level
+  - Set Output level HI
+  - Get Output level
+  - Set pin as Open-Drain
+  - Set Output level LO
+  - Get Output level
 */
-void SetOutput (void) {
+void GPIO_SetOutput (void) {
   uint32_t input;
 
   /* Setup pins */
@@ -439,66 +421,30 @@ void SetOutput (void) {
   input = drv->GetInput(GPIO_PIN_UNDER_TEST);
   TEST_ASSERT(input == 0U);
 
-  /* Set Output Level HI */
-  drv->SetOutput(GPIO_PIN_UNDER_TEST, 1U);
-
-  /* External high resistor as Pull-Up */
-  PinPull(GPIO_PIN_HIGHER, 1U);
-
-  osDelay(100);
-
-  /* Get Output */
-  input = drv->GetInput(GPIO_PIN_UNDER_TEST);
-  TEST_ASSERT(input == 1U);
-
-  /* Set Output Level LO */
-  drv->SetOutput(GPIO_PIN_UNDER_TEST, 0U);
-
-  /* Disable pin */
-  PinDisable(GPIO_PIN_HIGHER);
-
-  /* External low resistor as Pull-Down */
-  PinPull(GPIO_PIN_LOWER, 0U);
-
-  osDelay(100);
-
-  /* Get Output */
-  input = drv->GetInput(GPIO_PIN_UNDER_TEST);
-  TEST_ASSERT(input == 0U);
-
-  /* Disable pin */
-  PinDisable(GPIO_PIN_LOWER);
 }
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
 /**
-\brief  Function: GetInput
+\brief  Function: GPIO_GetInput
 \details
-The test Input Low level \b GetInput verifies the GPIO input with the sequence:
-  - \b Setup Pins
-  - \b Set pin as Input
-  - \b Set no Pull-Up/Down resistor (Disabled)
-  - \b External resistor with high resistor as Pull-Down
-  - \b Get Output level
-  - \b External high resistor as Pull-Up
-  - \b Get Output level
-
-  - \b Set Pull-Down resistor
-  - \b Get Output level
-  - \b External high resistor as Pull-Up
-  - \b Get Output level
-  - \b Set Pull-Up resistor
-  - \b Get Output level
-  - \b External resistor with high resistor as Pull-Down
-  - \b Get Output level
-
-  - \b External low resistor as Pull-Down
-  - \b Get Output level
-  - \b Set Pull-Down resistor
-  - \b External resistor with low resistor as Pull-Up
-  - \b Get Output level
+The function \b GPIO_GetInput verifies the GPIO input modes in the following order:
+  - Setup Pins
+  - Set pin as Input
+  - Set no Pull-Up/Down resistor (Disabled)
+  - External low resistor as Pull-Down
+  - Get Output level
+  - External low resistor as Pull-Up
+  - Get Output level
+  - Set Pull-Down resistor
+  - Get Output level
+  - External low resistor as Pull-Up
+  - Get Output level
+  - Set Pull-Up resistor
+  - Get Output level
+  - External low resistor as Pull-Down
+  - Get Output level
 */
-void GetInput (void) {
+void GPIO_GetInput (void) {
   uint32_t input;
 
   /* Setup pins */
@@ -510,8 +456,8 @@ void GetInput (void) {
   /* Set no Pull-Up/Down resistor (Disabled)*/
   TEST_ASSERT(drv->SetPullResistor(GPIO_PIN_UNDER_TEST, ARM_GPIO_PULL_NONE) == ARM_DRIVER_OK);
 
-  /* External resistor with high resistor as Pull-Down */
-  PinPull(GPIO_PIN_HIGHER, 0U);
+  /* External low resistor as Pull-Down */
+  PinPull(GPIO_PIN_AUX, 0U);
 
   osDelay(100);
 
@@ -519,8 +465,8 @@ void GetInput (void) {
   input = drv->GetInput(GPIO_PIN_UNDER_TEST);
   TEST_ASSERT(input == 0U);
 
-  /* External high resistor as Pull-Up */
-  PinPull(GPIO_PIN_HIGHER, 1U);
+  /* External low resistor as Pull-Up */
+  PinPull(GPIO_PIN_AUX, 1U);
 
   osDelay(100);
 
@@ -529,7 +475,7 @@ void GetInput (void) {
   TEST_ASSERT(input == 1U);
 
   /* Disable pin */
-  PinDisable(GPIO_PIN_HIGHER);
+  PinDisable(GPIO_PIN_AUX);
 
   /* Set Pull-Down resistor */
   TEST_ASSERT(drv->SetPullResistor(GPIO_PIN_UNDER_TEST, ARM_GPIO_PULL_DOWN) == ARM_DRIVER_OK);
@@ -540,17 +486,17 @@ void GetInput (void) {
   input = drv->GetInput(GPIO_PIN_UNDER_TEST);
   TEST_ASSERT(input == 0U);
 
-  /* External high resistor as Pull-Up */
-  PinPull(GPIO_PIN_HIGHER, 1U);
+  /* External low resistor as Pull-Up */
+  PinPull(GPIO_PIN_AUX, 1U);
 
   osDelay(100);
 
   /* Get Output */
   input = drv->GetInput(GPIO_PIN_UNDER_TEST);
-  TEST_ASSERT(input == 0U);
+  TEST_ASSERT(input == 1U);
 
   /* Disable pin */
-  PinDisable(GPIO_PIN_HIGHER);
+  PinDisable(GPIO_PIN_AUX);
 
   /* Set Pull-Up resistor */
   TEST_ASSERT(drv->SetPullResistor(GPIO_PIN_UNDER_TEST, ARM_GPIO_PULL_UP) == ARM_DRIVER_OK);
@@ -561,37 +507,17 @@ void GetInput (void) {
   input = drv->GetInput(GPIO_PIN_UNDER_TEST);
   TEST_ASSERT(input == 1U);
 
-  /* External resistor with high resistor as Pull-Down */
-  PinPull(GPIO_PIN_HIGHER, 0U);
+  /* External low resistor as Pull-Down */
+  PinPull(GPIO_PIN_AUX, 0U);
 
   osDelay(100);
 
   /* Get Output */
   input = drv->GetInput(GPIO_PIN_UNDER_TEST);
-  TEST_ASSERT(input == 1U);
-
-  /* Disable pin */
-  PinDisable(GPIO_PIN_HIGHER);
-
-  /* External low resistor as Pull-Down */
-  PinPull(GPIO_PIN_LOWER, 0U);
-
-  /* Get Output */
-  input = drv->GetInput(GPIO_PIN_UNDER_TEST);
   TEST_ASSERT(input == 0U);
 
-  /* Set Pull-Down resistor */
-  TEST_ASSERT(drv->SetPullResistor(GPIO_PIN_UNDER_TEST, ARM_GPIO_PULL_DOWN) == ARM_DRIVER_OK);
-
-  /* External resistor with low resistor as Pull-Up */
-  PinPull(GPIO_PIN_LOWER, 1U);
-
-  /* Get Output */
-  input = drv->GetInput(GPIO_PIN_UNDER_TEST);
-  TEST_ASSERT(input == 1U);
-
   /* Disable pin */
-  PinDisable(GPIO_PIN_LOWER);
+  PinDisable(GPIO_PIN_AUX);
 }
 
 /**

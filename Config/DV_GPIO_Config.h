@@ -20,7 +20,7 @@
  * $Revision:   V1.0.0
  *
  * Project:     CMSIS-Driver Validation
- * Title:       General Input Output (GPIO) driver validation 
+ * Title:       General-Purpose Input/Output (GPIO) driver validation 
  *              configuration file
  *
  * -----------------------------------------------------------------------------
@@ -32,64 +32,48 @@
 //-------- <<< Use Configuration Wizard in Context Menu >>> --------------------
 
 // <h> GPIO
-// <i> General Input Output (GPIO) driver validation configuration
-// <o> Driver_GPIO# <2-255>
-// <i> Choose the Driver_GPIO# instance to test pin
-// <i> For example to test Driver_GPIO0 select 0
-#define DRV_GPIO                         0
-// <h> Configuration
-// <o> Pin under test <0-160>
-// <i> Select pin number setting to test
-// <i> Pin need to be without external resistors on board
-#define GPIO_PIN_UNDER_TEST              0
-// <e> Additional Pins
-#define GPIO_ADDITIONAL_PINS_EN          1
-// <o> Pin with low resistor <0-160>
-// <i> Select pin number with low resistor setting to test.
-// <i> Lower resistor value (under 1k Ohm)
-#define GPIO_PIN_LOWER                   0
-// <o> Pin with high resistor  <0-160>
-// <i> Select pin number with high resistor setting to test.
-// <i> Higher resistor value (uper 1M Ohm)
-#define GPIO_PIN_HIGHER                  0
-// </e>
+//   <i> General-Purpose Input/Output (GPIO) driver validation configuration
+//   <o0> Driver_GPIO# <0-255>
+//     <i> Choose the Driver_GPIO# instance to test.
+//     <i> For example to test Driver_GPIO0 select 0.
+//   <h> Configuration
+//     <i> Pins and Tests configuration.
+//     <o1> Pin under test <0-255>
+//       <i> Select pin to be tested.
+//       <i> This pin should not have any external resistors or any external devices connected to it.
+//     <o2> Auxiliary Pin
+//       <i> Select auxiliary pin with serial low resistance resistor connected to Pin under test.
+//       <i> Suggested resistance of this serial resistor is around 1 kOhm.
+//       <i> This pin should not have any external resistors or any external devices connected to it.
+//   </h>
+//   <h> Tests
+//     <i> Enable / disable tests.
+//     <q3> GPIO_Setup
+//       <i> Enable / disable Setup function tests.
+//     <q4> GPIO_SetDirection
+//       <i> Enable / disable SetDirection function tests.
+//     <q5> GPIO_SetOutputMode
+//       <i> Enable / disable SetOutputMode function tests.
+//     <q6> GPIO_SetPullResistor
+//       <i> Enable / disable SetPullResistor function tests.
+//     <q7> GPIO_SetEventTrigger
+//       <i> Enable / disable SetEventTrigger function tests.
+//     <q8> GPIO_SetOutput
+//       <i> Enable / disable SetOutput function tests.
+//     <q9> GPIO_GetInput
+//       <i> Enable / disable GetInput function tests.
+//   </h>
 // </h>
 
-// <h> Tests
-// <i> Enable / disable tests
-// <e> API
-// <i> Enable / disable API tests.
-#define GPIO_API_EN                      1
-// <q> GPIO_Setup
-// <i> Enable / disable Setup API test
-#define GPIO_SETUP_EN                    1
-// <q> GPIO_SetDirection
-// <i> Enable / disable Direction API test
-#define GPIO_SET_DIRECTION_EN            1
-// <q> GPIO_SetOutputMode
-// <i> Enable / disable OutputMode API test
-#define GPIO_SET_OUTPUT_MODE_EN          1
-// <q> GPIO_SetPullResistor
-// <i> Enable / disable PullResistor Pull-Down/Up API test
-#define GPIO_SET_PULL_RESISTOR_EN        1
-// <q> GPIO_SetEventTrigger
-// <i> Enable / disable EventTriggerEdge function test
-#define GPIO_SET_EVENT_TRIGGER_EN        1
-// </e>
-// <e> Functional
-// <i> On board connect Pin under test and selected additional Pins as Loopback
-#define GPIO_FUNCTIONAL_EN               1
-// <q> SetEventTrigger
-// <i> Enable / disable EventTriggerEdge function test
-#define SET_EVENT_TRIGGER_EN             1
-// <q> SetOutput
-// <i> Enable / disable Output level function test
-#define SET_OUTPUT_EN                    1
-// <q> GetInput
-// <i> Enable / disable Input low level function test
-#define GET_INPUT_EN                     1
-// </e>
-// </h>
-// </h>
+#define DRV_GPIO                        0
+#define GPIO_CFG_PIN_UNDER_TEST         63
+#define GPIO_CFG_PIN_AUX                33
+#define GPIO_TC_SETUP_EN                1
+#define GPIO_TC_SET_DIRECTION_EN        1
+#define GPIO_TC_SET_OUTPUT_MODE_EN      1
+#define GPIO_TC_SET_PULL_RESISTOR_EN    1
+#define GPIO_TC_SET_EVENT_TRIGGER_EN    1
+#define GPIO_TC_SET_OUTPUT_EN           1
+#define GPIO_TC_GET_INPUT_EN            1
 
 #endif /* DV_GPIO_CONFIG_H_ */
