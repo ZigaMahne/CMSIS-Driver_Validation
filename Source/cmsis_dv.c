@@ -525,7 +525,7 @@ TEST_GROUP ts[] = {
 },
 #endif
 
-#ifdef  RTE_CMSIS_DV_GPIO               /* GPIO test group                     */
+#ifdef  RTE_CMSIS_DV_GPIO               /* GPIO test group                    */
 {
   __FILE__, __DATE__, __TIME__,
   "CMSIS-Driver_Validation v" RTE_CMSIS_DV_PACK_VER " CMSIS-Driver GPIO Test Report",

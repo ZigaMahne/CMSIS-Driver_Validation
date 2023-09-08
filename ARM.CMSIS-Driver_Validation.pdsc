@@ -7,10 +7,9 @@
   <license>LICENSE.txt</license>
 
   <releases>
-    <release version="0.0.0">
+    <release version="3.1.0-dev">
       Active Development ...
-      - Update GPIO test cases
-      - Add GPIO CMSIS-Driver Validation Documentation
+      - Add GPIO Driver validation
     </release>
   </releases>
 
@@ -59,7 +58,7 @@
     <condition id="CMSIS Driver Validation GPIO">
       <description>CMSIS Driver GPIO</description>
       <require condition="CMSIS Core with RTOS and STDOUT"/>
-      <require Cclass="CMSIS Driver"            Cgroup="GPIO"          Capiversion="1.0.0"/>
+      <require Cclass="CMSIS Driver"            Cgroup="GPIO"         Capiversion="1.0.0"/>
       <require Cclass="CMSIS Driver Validation" Cgroup="Framework"/>
     </condition>
 
@@ -147,7 +146,7 @@
     <component Cclass="CMSIS Driver Validation" Cgroup="GPIO" Cversion="1.0.0" condition="CMSIS Driver Validation GPIO">
       <description>GPIO driver validation</description>
       <RTE_Components_h>
-        #define RTE_CMSIS_DV_GPIO        /* Driver Validation GPIO enabled */
+        #define RTE_CMSIS_DV_GPIO       /* Driver Validation GPIO enabled */
       </RTE_Components_h>
       <files>
         <file category="doc"    name="Documentation/html/group__dv__gpio.html" />

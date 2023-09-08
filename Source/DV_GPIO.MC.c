@@ -167,6 +167,8 @@ void GPIO_Setup (void) {
 
   // Call Setup function (with callback specified) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->Setup(GPIO_PIN_UNDER_TEST, GPIO_DrvEvent) == ARM_DRIVER_OK);
+
+  drv->Setup(GPIO_PIN_UNDER_TEST, NULL);
 }
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
@@ -195,6 +197,8 @@ void GPIO_SetDirection (void) {
 
   // Call SetDirection function (with output direction) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetDirection(GPIO_PIN_UNDER_TEST, ARM_GPIO_OUTPUT) == ARM_DRIVER_OK);
+
+  drv->Setup(GPIO_PIN_UNDER_TEST, NULL);
 }
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
@@ -223,6 +227,8 @@ void GPIO_SetOutputMode (void) {
 
   // Call SetOutputMode function (with open-drain mode) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetOutputMode(GPIO_PIN_UNDER_TEST, ARM_GPIO_OPEN_DRAIN) == ARM_DRIVER_OK);
+
+  drv->Setup(GPIO_PIN_UNDER_TEST, NULL);
 }
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
@@ -255,6 +261,8 @@ void GPIO_SetPullResistor (void) {
 
   // Call SetPullResistor function (with pull-down resistor) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetPullResistor(GPIO_PIN_UNDER_TEST, ARM_GPIO_PULL_DOWN) == ARM_DRIVER_OK);
+
+  drv->Setup(GPIO_PIN_UNDER_TEST, NULL);
 }
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
@@ -312,7 +320,8 @@ void GPIO_SetEventTrigger (void) {
   TEST_ASSERT(drv->SetEventTrigger(GPIO_PIN_UNDER_TEST, ARM_GPIO_TRIGGER_EITHER_EDGE) == ARM_DRIVER_OK);
 
   /* Setup pins */
-  DriverInit();
+  drv->Setup(GPIO_PIN_AUX, NULL);
+//  DriverInit();
 
   PinPull(GPIO_PIN_AUX, 0U);
 
