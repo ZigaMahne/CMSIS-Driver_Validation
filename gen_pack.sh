@@ -47,7 +47,6 @@ PACKCHK_ARGS=()
 # Specify additional dependencies for packchk
 PACKCHK_DEPS="
   ARM.CMSIS.pdsc
-  ARM.CMSIS-RTX.pdsc
   Keil.STM32F2xx_DFP.pdsc
   Keil.STM32F4xx_DFP.pdsc
   Keil.STM32F7xx_DFP.pdsc

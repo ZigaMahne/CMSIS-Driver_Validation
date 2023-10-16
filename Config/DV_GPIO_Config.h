@@ -38,11 +38,11 @@
 //     <i> For example to test Driver_GPIO0 select 0.
 //   <h> Configuration
 //     <i> Pins and Tests configuration.
-//     <o1> Pin under test <0-255>
+//     <o1> Pin Under Test <0-255>
 //       <i> Select pin to be tested.
 //       <i> This pin should not have any external resistors or any external devices connected to it.
 //     <o2> Auxiliary Pin
-//       <i> Select auxiliary pin with serial low resistance resistor connected to Pin under test.
+//       <i> Select Auxiliary Pin with serial low resistance resistor connected to Pin Under Test.
 //       <i> Suggested resistance of this serial resistor is around 1 kOhm.
 //       <i> This pin should not have any external resistors or any external devices connected to it.
 //   </h>
