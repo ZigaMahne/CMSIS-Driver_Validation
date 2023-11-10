@@ -18,7 +18,7 @@
  * -----------------------------------------------------------------------------
  *
  * Project:     CMSIS-Driver Validation
- * Title:       General Input Output (GPIO) Driver Validation tests
+ * Title:       General-purpose Input Output (GPIO) Driver Validation tests
  *
  * -----------------------------------------------------------------------------
  */
@@ -36,70 +36,51 @@
 #include "Driver_GPIO.h"
 
 // Register Driver_GPIO#
-extern ARM_DRIVER_GPIO CREATE_SYMBOL(Driver_GPIO, DRV_GPIO);
-static ARM_DRIVER_GPIO *drv = &CREATE_SYMBOL(Driver_GPIO, DRV_GPIO);
+extern ARM_DRIVER_GPIO          CREATE_SYMBOL(Driver_GPIO, DRV_GPIO);
+static ARM_DRIVER_GPIO *drv =  &CREATE_SYMBOL(Driver_GPIO, DRV_GPIO);
 
 // Global variables (used in this module only)
-static uint8_t volatile GPIO_Event = 0U;
-static ARM_GPIO_Pin_t volatile  GPIO_Pin = 0U;
-static uint8_t volatile IRQ_cnt = 0U;
+static volatile uint8_t         gpio_event;
+static volatile ARM_GPIO_Pin_t  gpio_pin;
+static volatile uint8_t         gpio_irq_cnt;
 
 // Local functions
-static void GPIO_DrvEvent (ARM_GPIO_Pin_t pin, uint32_t event);
-static void Driver_Auxiliary_Pin (uint32_t out);
-static void Disable_Auxiliary_Pin (void);
-static int32_t IsPinUnderTestAvailable (void);
-static int32_t IsAuxiliaryPinAvailable (void);
+static void     GPIO_DrvEvent           (ARM_GPIO_Pin_t pin, uint32_t event);
+static int32_t  PinUnderTestIsAvailable (void);
+static void     PinUnderTestUninit      (void);
+static uint32_t PinUnderTestGetInput    (void);
+static int32_t  AuxiliaryPinIsAvailable (void);
+static void     AuxiliaryPinUninit      (void);
+static void     AuxiliaryPinConfigInput (void);
+static uint32_t AuxiliaryPinGetInput    (void);
+static void     AuxiliaryPinSetOutput   (uint32_t val);
+static void     AuxiliaryPinDisable     (void);
+
+// Helper functions
 
 /*
   \fn            static void GPIO_DrvEvent (ARM_GPIO_Pin_t pin, uint32_t event)
-  \brief         Store event(s) into a global variable.
-  \param[in]     pin            Specifies the pin to be triggered
+  \brief         Store event(s) into a global variables.
+  \detail        This is a callback function called by the driver upon an event(s).
+  \param[in]     pin            GPIO pin
   \param[in]     event          GPIO event
   \return        none
 */
 static void GPIO_DrvEvent (ARM_GPIO_Pin_t pin, uint32_t event) {
-  GPIO_Event |= event;
-  GPIO_Pin    = pin;
-  IRQ_cnt    += 1U;
+  gpio_event   |= event;
+  gpio_pin      = pin;
+  gpio_irq_cnt += 1U;
 }
 
 /*
-  \fn            static void Driver_Auxiliary_Pin (uint32_t out)
-  \brief         Drive GPIO pin output level (0 or 1).
-  \param[in]     out            GPIO Pin output level
-  \return        none
-*/
-static void Driver_Auxiliary_Pin (uint32_t out) {
-
-  drv->SetDirection(GPIO_PIN_AUX, ARM_GPIO_OUTPUT);
-  drv->SetOutputMode(GPIO_PIN_AUX, ARM_GPIO_PUSH_PULL);
-  drv->SetPullResistor(GPIO_PIN_AUX, ARM_GPIO_PULL_NONE);
-  drv->SetOutput(GPIO_PIN_AUX, out);
-}
-
-/*
-  \fn            static void Disable_Auxiliary_Pin (void)
-  \brief         Disable GPIO_PIN_AUX pin.
-  \param[in]     none
-  \return        none
-*/
-static void Disable_Auxiliary_Pin (void) {
-
-  drv->SetOutput(GPIO_PIN_AUX, 0U);
-  drv->SetDirection(GPIO_PIN_AUX, ARM_GPIO_INPUT);
-  drv->SetOutputMode(GPIO_PIN_AUX, ARM_GPIO_OPEN_DRAIN);
-}
-
-/*
-  \fn            static int32_t IsPinUnderTestAvailable (void)
+  \fn            static int32_t PinUnderTestIsAvailable (void)
   \brief         Check if Pin Under Test is available.
   \detail        This function is used to skip executing a test if Pin Under Test is not available.
   \return        execution status
                    - EXIT_SUCCESS: Pin Under Test is available
                    - EXIT_FAILURE: Pin Under Test is not available
 */
-static int32_t IsPinUnderTestAvailable (void) {
+static int32_t PinUnderTestIsAvailable (void) {
 
   if (drv->Setup(GPIO_PIN_UNDER_TEST, NULL) == ARM_DRIVER_OK) {
     return EXIT_SUCCESS;
@@ -110,14 +91,37 @@ static int32_t IsPinUnderTestAvailable (void) {
 }
 
 /*
-  \fn            static int32_t IsAuxiliaryPinAvailable (void)
+  \fn            static void PinUnderTestUninit (void)
+  \brief         Uninitialize Pin Under Test.
+  \param[in]     none
+  \return        none
+*/
+static void PinUnderTestUninit (void) {
+
+  drv->SetDirection(GPIO_PIN_UNDER_TEST, ARM_GPIO_INPUT);
+  drv->Setup       (GPIO_PIN_UNDER_TEST, NULL);
+}
+
+/*
+  \fn            static void PinUnderTestGetInput (void)
+  \brief         Get Pin Under Test input level (0 or 1).
+  \param[in]     none
+  \return        intput level
+*/
+static uint32_t PinUnderTestGetInput (void) {
+
+  return (drv->GetInput(GPIO_PIN_UNDER_TEST));
+}
+
+/*
+  \fn            static int32_t AuxiliaryPinIsAvailable (void)
   \brief         Check if Auxiliary Pin is available.
   \detail        This function is used to skip executing a test if Auxiliary Pin is not available.
   \return        execution status
                    - EXIT_SUCCESS: Auxiliary Pin is available
                    - EXIT_FAILURE: Auxiliary Pin is not available
 */
-static int32_t IsAuxiliaryPinAvailable (void) {
+static int32_t AuxiliaryPinIsAvailable (void) {
 
   if (drv->Setup(GPIO_PIN_AUX, NULL) == ARM_DRIVER_OK) {
     return EXIT_SUCCESS;
@@ -127,23 +131,80 @@ static int32_t IsAuxiliaryPinAvailable (void) {
   }
 }
 
-#endif                                  // End of exclude form the documentation
+/*
+  \fn            static void AuxiliaryPinUninit (void)
+  \brief         Uninitialize Auxiliary Pin.
+  \param[in]     none
+  \return        none
+*/
+static void AuxiliaryPinUninit (void) {
 
-/*-----------------------------------------------------------------------------
- *      Tests
- *----------------------------------------------------------------------------*/
+  drv->SetDirection(GPIO_PIN_AUX, ARM_GPIO_INPUT);
+  drv->Setup       (GPIO_PIN_AUX, NULL);
+}
+
+/*
+  \fn            static void AuxiliaryPinConfigInput (void)
+  \brief         Configure Auxiliary Pin as Input.
+  \param[in]     none
+  \return        none
+*/
+static void AuxiliaryPinConfigInput (void) {
+
+  drv->SetDirection(GPIO_PIN_AUX, ARM_GPIO_INPUT);
+}
+
+/*
+  \fn            static void AuxiliaryPinGetInput (void)
+  \brief         Get Auxiliary Pin input level (0 or 1).
+  \param[in]     none
+  \return        intput level
+*/
+static uint32_t AuxiliaryPinGetInput (void) {
+
+  return (drv->GetInput(GPIO_PIN_AUX));
+}
+
+/*
+  \fn            static void AuxiliaryPinSetOutput (uint32_t val)
+  \brief         Set Auxiliary Pin output level (0 or 1).
+  \param[in]     val            Output level
+  \return        none
+*/
+static void AuxiliaryPinSetOutput (uint32_t val) {
+
+  drv->SetDirection(GPIO_PIN_AUX, ARM_GPIO_OUTPUT);
+  drv->SetOutputMode(GPIO_PIN_AUX, ARM_GPIO_PUSH_PULL);
+  drv->SetPullResistor(GPIO_PIN_AUX, ARM_GPIO_PULL_NONE);
+  drv->SetOutput(GPIO_PIN_AUX, val);
+}
+
+/*
+  \fn            static void AuxiliaryPinDisable (void)
+  \brief         Auxiliary Pin Disable.
+  \param[in]     none
+  \return        intput level
+*/
+static void AuxiliaryPinDisable (void) {
+
+  drv->SetOutput(GPIO_PIN_AUX, 0U);
+  drv->SetDirection(GPIO_PIN_AUX, ARM_GPIO_INPUT);
+  drv->SetOutputMode(GPIO_PIN_AUX, ARM_GPIO_OPEN_DRAIN);
+}
+
+#endif                                  // End of exclude form the documentation
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
 /**
 \defgroup dv_gpio GPIO Validation
 \brief GPIO driver validation
 \details
-The GPIO validation test performs the following checks:
+The GPIO validation performs the following tests:
 - API interface compliance
 - Functions operation
 - Event signaling
 
-To perform GPIO validation tests, it is required to select and configure (in the <b>DV_GPIO_Config.h</b>) two pins:
+To perform GPIO validation tests, it is required to select and configure two pins in the <b>DV_GPIO_Config.h</b> configuration file:
 - Pin Under Test: pin to be tested
 - Auxiliary Pin: pin with serial low resistance resistor connected to Pin Under Test (suggested resistance of this resistor is around 1 kOhm)
 
@@ -154,10 +215,11 @@ To perform GPIO validation tests, it is required to select and configure (in the
 
 \defgroup gpio_tests Tests
 \ingroup dv_gpio
-
 @{
 */
 
+/*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
+/* GPIO tests                                                                                                               */
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
 /**
 \brief  Function: GPIO_Setup
@@ -174,13 +236,15 @@ Testing sequence:
 void GPIO_Setup (void) {
   int32_t ret;
 
-  if (IsPinUnderTestAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
+  if (PinUnderTestIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
 
   // Call Setup function (without callback specified) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->Setup(GPIO_PIN_UNDER_TEST, NULL) == ARM_DRIVER_OK);
 
   // Call Setup function (with callback specified) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->Setup(GPIO_PIN_UNDER_TEST, GPIO_DrvEvent) == ARM_DRIVER_OK);
+
+  PinUnderTestUninit();
 }
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
@@ -193,22 +257,69 @@ The function \b GPIO_SetDirection verifies the \b SetDirection function.
 \endcode
 
 Testing sequence:
-  - Call Setup function (without callback specified) and assert that it returned ARM_DRIVER_OK status
   - Call SetDirection function (with input direction) and assert that it returned ARM_DRIVER_OK status
+  - Drive Auxiliary Pin low
+  - Read Pin Under Test input level and assert that it returned 0
+  - Drive Auxiliary Pin high
+  - Read Pin Under Test input level and assert that it returned 1
+  - Configure Auxiliary Pin as input
   - Call SetDirection function (with output direction) and assert that it returned ARM_DRIVER_OK status
+  - Call SetOutput function and set output level low
+  - Read Auxiliary Pin input level and assert that it returned 0
+  - Call SetOutput function and set output level high
+  - Read Auxiliary Pin input level and assert that it returned 1
 */
 void GPIO_SetDirection (void) {
 
-  if (IsPinUnderTestAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
-
-  // Call Setup function (without callback specified) and assert that it returned ARM_DRIVER_OK status
-  TEST_ASSERT(drv->Setup(GPIO_PIN_UNDER_TEST, NULL) == ARM_DRIVER_OK);
+  if (PinUnderTestIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
+  if (AuxiliaryPinIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
 
   // Call SetDirection function (with input direction) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetDirection(GPIO_PIN_UNDER_TEST, ARM_GPIO_INPUT) == ARM_DRIVER_OK);
 
+  // Drive Auxiliary Pin low
+  AuxiliaryPinSetOutput(0U);
+
+ (void)osDelay(2U);
+
+  // Read Pin Under Test input level and assert that it returned 0
+  TEST_ASSERT(PinUnderTestGetInput() == 0U);
+
+  // Drive Auxiliary Pin high
+  AuxiliaryPinSetOutput(1U);
+
+ (void)osDelay(2U);
+
+  // Read Pin Under Test input level and assert that it returned 1
+  TEST_ASSERT(PinUnderTestGetInput() == 1U);
+
+  AuxiliaryPinConfigInput();            // Configure Auxiliary Pin as input
+
   // Call SetDirection function (with output direction) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetDirection(GPIO_PIN_UNDER_TEST, ARM_GPIO_OUTPUT) == ARM_DRIVER_OK);
+
+  // Call SetOutput function and set output level low
+  drv->SetOutput(GPIO_PIN_UNDER_TEST, 0U);
+
+ (void)osDelay(2U);
+
+  // Read Auxiliary Pin input level and assert that it returned 0
+  TEST_ASSERT(AuxiliaryPinGetInput() == 0U);
+
+  // Call SetOutput function and set output level high
+  drv->SetOutput(GPIO_PIN_UNDER_TEST, 1U);
+
+ (void)osDelay(2U);
+
+  // Read Auxiliary Pin input level and assert that it returned 1
+  TEST_ASSERT(AuxiliaryPinGetInput() == 1U);
+
+  // Disable Auxiliary Pin
+  AuxiliaryPinDisable();
+
+  // Uninitialize Auxiliary Pin and Pin Under Test
+  AuxiliaryPinUninit();
+  PinUnderTestUninit();
 }
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
@@ -221,22 +332,61 @@ The function \b GPIO_SetOutputMode verifies the \b SetOutputMode function.
 \endcode
 
 Testing sequence:
-  - Call Setup function (without callback specified) and assert that it returned ARM_DRIVER_OK status
+  - Call SetDirection function (with output direction) and assert that it returned ARM_DRIVER_OK status
   - Call SetOutputMode function (with push-pull mode) and assert that it returned ARM_DRIVER_OK status
+  - Configure Auxiliary Pin as input
+  - Call SetOutput function and set output level low
+  - Read Auxiliary Pin input level and assert that it returned 0
+  - Call SetOutput function and set output level high
+  - Read Auxiliary Pin input level and assert that it returned 1
   - Call SetOutputMode function (with open-drain mode) and assert that it returned ARM_DRIVER_OK status
+  - Call SetOutput function and set output level low
+  - Read Auxiliary Pin input level and assert that it returned 0
 */
 void GPIO_SetOutputMode (void) {
 
-  if (IsPinUnderTestAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
+  if (PinUnderTestIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
+  if (AuxiliaryPinIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
 
-  // Call Setup function (without callback specified) and assert that it returned ARM_DRIVER_OK status
-  TEST_ASSERT(drv->Setup(GPIO_PIN_UNDER_TEST, NULL) == ARM_DRIVER_OK);
+  // Call SetDirection function (with output direction) and assert that it returned ARM_DRIVER_OK status
+  TEST_ASSERT(drv->SetDirection(GPIO_PIN_UNDER_TEST, ARM_GPIO_OUTPUT) == ARM_DRIVER_OK);
 
   // Call SetOutputMode function (with push-pull mode) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetOutputMode(GPIO_PIN_UNDER_TEST, ARM_GPIO_PUSH_PULL) == ARM_DRIVER_OK);
 
+  // Configure Auxiliary Pin as input
+  AuxiliaryPinConfigInput();
+
+  // Call SetOutput function and set output level low
+  drv->SetOutput(GPIO_PIN_UNDER_TEST, 0U);
+
+  (void)osDelay(2U);
+
+  // Read Auxiliary Pin input level and assert that it returned 0
+  TEST_ASSERT(AuxiliaryPinGetInput() == 0U);
+
+  // Call SetOutput function and set output level high
+  drv->SetOutput(GPIO_PIN_UNDER_TEST, 1U);
+
+  (void)osDelay(2U);
+
+  // Read Auxiliary Pin input level and assert that it returned 1
+  TEST_ASSERT(AuxiliaryPinGetInput() == 1U);
+
   // Call SetOutputMode function (with open-drain mode) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetOutputMode(GPIO_PIN_UNDER_TEST, ARM_GPIO_OPEN_DRAIN) == ARM_DRIVER_OK);
+
+  // Call SetOutput function and set output level low
+  drv->SetOutput(GPIO_PIN_UNDER_TEST, 0U);
+
+  (void)osDelay(2U);
+
+  // Read Auxiliary Pin input level and assert that it returned 0
+  TEST_ASSERT(AuxiliaryPinGetInput() == 0U);
+
+  // Uninitialize Auxiliary Pin and Pin Under Test
+  AuxiliaryPinUninit();
+  PinUnderTestUninit();
 }
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
@@ -249,26 +399,92 @@ The function \b GPIO_SetPullResistor verifies the \b SetPullResistor function.
 \endcode
 
 Testing sequence:
-  - Call Setup function (without callback specified) and assert that it returned ARM_DRIVER_OK status
-  - Call SetPullResistor function (without pull resistor) and assert that it returned ARM_DRIVER_OK status
-  - Call SetPullResistor function (with pull-up resistor) and assert that it returned ARM_DRIVER_OK status
+  - Call SetDirection function (with input direction) and assert that it returned ARM_DRIVER_OK status
+  - Call SetPullResistor function (with none resistor) and assert that it returned ARM_DRIVER_OK status
+  - Drive Auxiliary Pin low
+  - Read Pin Under Test input level and assert that it returned 0
+  - Drive Auxiliary Pin high
+  - Read Pin Under Test input level and assert that it returned 1
   - Call SetPullResistor function (with pull-down resistor) and assert that it returned ARM_DRIVER_OK status
+  - Read Pin Under Test input level and assert that it returned 0
+  - Drive Auxiliary Pin high
+  - Read Pin Under Test input level and assert that it returned 1
+  - Call SetPullResistor function (with pull-up resistor) and assert that it returned ARM_DRIVER_OK status
+  - Read Pin Under Test input level and assert that it returned 1
+  - Drive Auxiliary Pin low
+  - Read Pin Under Test input level and assert that it returned 0   
 */
 void GPIO_SetPullResistor (void) {
 
-  if (IsPinUnderTestAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
+  if (PinUnderTestIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
+  if (AuxiliaryPinIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
 
-  // Call Setup function (without callback specified) and assert that it returned ARM_DRIVER_OK status
-  TEST_ASSERT(drv->Setup(GPIO_PIN_UNDER_TEST, NULL) == ARM_DRIVER_OK);
+  // Call SetDirection function (with input direction) and assert that it returned ARM_DRIVER_OK status
+  TEST_ASSERT(drv->SetDirection(GPIO_PIN_UNDER_TEST, ARM_GPIO_INPUT) == ARM_DRIVER_OK);
 
-  // Call SetPullResistor function (without pull resistor) and assert that it returned ARM_DRIVER_OK status
+  // Call SetPullResistor function (with none resistor) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetPullResistor(GPIO_PIN_UNDER_TEST, ARM_GPIO_PULL_NONE) == ARM_DRIVER_OK);
+
+  // Drive Auxiliary Pin low
+  AuxiliaryPinSetOutput(0U);
+
+  (void)osDelay(2U);
+
+  // Read Pin Under Test input level and assert that it returned 0
+  TEST_ASSERT(PinUnderTestGetInput() == 0U);
+
+  // Drive Auxiliary Pin high
+  AuxiliaryPinSetOutput(1U);
+
+  (void)osDelay(2U);
+
+  // Read Pin Under Test input level and assert that it returned 1
+  TEST_ASSERT(PinUnderTestGetInput() == 1U);
+
+  // Disable Auxiliary Pin
+  AuxiliaryPinDisable();
+
+  // Call SetPullResistor function (with pull-down resistor) and assert that it returned ARM_DRIVER_OK status
+  TEST_ASSERT(drv->SetPullResistor(GPIO_PIN_UNDER_TEST, ARM_GPIO_PULL_DOWN) == ARM_DRIVER_OK);
+
+  (void)osDelay(2U);
+
+  // Read Pin Under Test input level and assert that it returned 0
+  TEST_ASSERT(PinUnderTestGetInput() == 0U);
+
+  // Drive Auxiliary Pin high
+  AuxiliaryPinSetOutput(1U);
+
+  (void)osDelay(2U);
+
+  // Read Pin Under Test input level and assert that it returned 1
+  TEST_ASSERT(PinUnderTestGetInput() == 1U);
+
+  // Disable Auxiliary Pin
+  AuxiliaryPinDisable();
 
   // Call SetPullResistor function (with pull-up resistor) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetPullResistor(GPIO_PIN_UNDER_TEST, ARM_GPIO_PULL_UP) == ARM_DRIVER_OK);
 
-  // Call SetPullResistor function (with pull-down resistor) and assert that it returned ARM_DRIVER_OK status
-  TEST_ASSERT(drv->SetPullResistor(GPIO_PIN_UNDER_TEST, ARM_GPIO_PULL_DOWN) == ARM_DRIVER_OK);
+  (void)osDelay(2U);
+
+  // Read Pin Under Test input level and assert that it returned 1
+  TEST_ASSERT(PinUnderTestGetInput() == 1U);
+
+  // Drive Auxiliary Pin low
+  AuxiliaryPinSetOutput(0U);
+
+  (void)osDelay(2U);
+
+  // Read Pin Under Test input level and assert that it returned 0
+  TEST_ASSERT(PinUnderTestGetInput() == 0U);
+
+  // Disable Auxiliary Pin
+  AuxiliaryPinDisable();
+
+  // Uninitialize Auxiliary Pin and Pin Under Test
+  AuxiliaryPinUninit();
+  PinUnderTestUninit();
 }
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
@@ -281,191 +497,168 @@ The function \b GPIO_SetEventTrigger verifies the \b SetEventTrigger function.
 \endcode
 
 Testing sequence:
-  - API interface compliance:
-    - Call Setup function (without callback specified) and assert that it returned ARM_DRIVER_OK status
-    - Call SetEventTrigger function (with disabled triggering) and assert that it returned ARM_DRIVER_OK status
-    - Call SetEventTrigger function (with trigger on rising-edge) and assert that it returned ARM_DRIVER_OK status
-    - Call SetEventTrigger function (with trigger on falling edge) and assert that it returned ARM_DRIVER_OK status
-    - Call SetEventTrigger function (with trigger on either edge) and assert that it returned ARM_DRIVER_OK status
-  - Functional compliance:
-    - Setup pins
-    - Call SetEventTrigger function (with trigger on rising-edge) and assert that it returned ARM_DRIVER_OK status
-    - Trigger Rising Edge with external low resistor
-    - Call SetEventTrigger function (with trigger on falling edge) and assert that it returned ARM_DRIVER_OK status
-    - Trigger Falling Edge with external low resistor
-    - Call SetEventTrigger function (with trigger on either edge) and assert that it returned ARM_DRIVER_OK status
-    - Trigger Either Edge with external low resistor
-    - Call SetEventTrigger function (with disabled triggering) and assert that it returned ARM_DRIVER_OK status
-    - Trigger Rising/Falling Edge with external low resistor
-    - Call SetEventTrigger function (with trigger on either edge) and assert that it returned ARM_DRIVER_OK status
-    - Disable IRQ
-    - Trigger Either Edge with external low resistor
-    - Enable IRQ
+  - Call Setup function (with callback specified) and assert that it returned ARM_DRIVER_OK status
+  - Drive Auxiliary Pin low
+  - Call SetEventTrigger function (with trigger on rising-edge) and assert that it returned ARM_DRIVER_OK status
+  - Trigger Rising Edge with drive Auxiliary Pin high
+  - Call SetEventTrigger function (with trigger on falling edge) and assert that it returned ARM_DRIVER_OK status
+  - Trigger Falling Edge with drive Auxiliary Pin low
+  - Call SetEventTrigger function (with trigger on either edge) and assert that it returned ARM_DRIVER_OK status
+  - Trigger Rising Edge with drive Auxiliary Pin high
+  - Trigger Falling Edge with drive Auxiliary Pin low
+  - Call SetEventTrigger function (with disabled triggering) and assert that it returned ARM_DRIVER_OK status
+  - Trigger Rising/Falling Edge with drive Auxiliary Pin high/low
+  - Call SetEventTrigger function (with trigger on either edge) and assert that it returned ARM_DRIVER_OK status
+  - Disable IRQ
+  - Trigger Rising/Falling Edge with drive Auxiliary Pin high/low
+  - Enable IRQ
 */
 void GPIO_SetEventTrigger (void) {
-  int32_t ret;
 
-  if (IsPinUnderTestAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
-  if (IsAuxiliaryPinAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
+  if (PinUnderTestIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
+  if (AuxiliaryPinIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
 
-  // Call Setup function (without callback specified) and assert that it returned ARM_DRIVER_OK status
-  TEST_ASSERT(drv->Setup(GPIO_PIN_UNDER_TEST, NULL) == ARM_DRIVER_OK);
+  // Call Setup function (with callback specified) and assert that it returned ARM_DRIVER_OK status
+  TEST_ASSERT(drv->Setup(GPIO_PIN_UNDER_TEST, GPIO_DrvEvent) == ARM_DRIVER_OK);
 
-  // Call SetEventTrigger function (with disabled triggering) and assert that it returned ARM_DRIVER_OK status
-  TEST_ASSERT(drv->SetEventTrigger(GPIO_PIN_UNDER_TEST, ARM_GPIO_TRIGGER_NONE) == ARM_DRIVER_OK);
+  // Drive Auxiliary Pin low
+  AuxiliaryPinSetOutput(0U);
 
-  // Call SetEventTrigger function (with trigger on rising-edge) and assert that it returned ARM_DRIVER_OK status
-  TEST_ASSERT(drv->SetEventTrigger(GPIO_PIN_UNDER_TEST, ARM_GPIO_TRIGGER_RISING_EDGE) == ARM_DRIVER_OK);
-
-  // Call SetEventTrigger function (with trigger on falling edge) and assert that it returned ARM_DRIVER_OK status
-  TEST_ASSERT(drv->SetEventTrigger(GPIO_PIN_UNDER_TEST, ARM_GPIO_TRIGGER_FALLING_EDGE) == ARM_DRIVER_OK);
-
-  // Call SetEventTrigger function (with trigger on either edge) and assert that it returned ARM_DRIVER_OK status
-  TEST_ASSERT(drv->SetEventTrigger(GPIO_PIN_UNDER_TEST, ARM_GPIO_TRIGGER_EITHER_EDGE) == ARM_DRIVER_OK);
-
-  // Setup pins
-  drv->Setup(GPIO_PIN_UNDER_TEST, GPIO_DrvEvent);
-  drv->Setup(GPIO_PIN_AUX, NULL);
-
-  Driver_Auxiliary_Pin(0U);
-
-  GPIO_Event = 0U;
-  GPIO_Pin   = 0U;
-  IRQ_cnt    = 0U;
+  gpio_event   = 0U;
+  gpio_pin     = 0U;
+  gpio_irq_cnt = 0U;
 
   // Call SetEventTrigger function (with trigger on rising-edge) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetEventTrigger(GPIO_PIN_UNDER_TEST, ARM_GPIO_TRIGGER_RISING_EDGE) == ARM_DRIVER_OK);
 
-  // Trigger Rising Edge with external low resistor
-  Driver_Auxiliary_Pin( 1U);
+  // Trigger Rising Edge with drive Auxiliary Pin high
+  AuxiliaryPinSetOutput(1U);
 
-  osDelay(100);
+  (void)osDelay(2U);
 
   // Assert that event ARM_GPIO_EVENT_RISING_EDGE was signaled
-  TEST_ASSERT_MESSAGE(GPIO_Event == ARM_GPIO_EVENT_RISING_EDGE, "[FAILED] Event ARM_GPIO_EVENT_RISING_EDGE was not signaled!");
+  TEST_ASSERT_MESSAGE(gpio_event == ARM_GPIO_EVENT_RISING_EDGE, "[FAILED] Event ARM_GPIO_EVENT_RISING_EDGE was not signaled!");
 
   // Assert that pin GPIO_PIN_UNDER_TEST was triggered
-  TEST_ASSERT_MESSAGE(GPIO_Pin == GPIO_PIN_UNDER_TEST, "[FAILED] Pin GPIO_PIN_UNDER_TEST was not triggered!");
+  TEST_ASSERT_MESSAGE(gpio_pin == GPIO_PIN_UNDER_TEST, "[FAILED] Pin GPIO_PIN_UNDER_TEST was not triggered!");
 
   // Assert that number of interrupts was correct
-  TEST_ASSERT_MESSAGE(IRQ_cnt == 1U, "[FAILED] Number of triggered interrupts is incorrect!");
+  TEST_ASSERT_MESSAGE(gpio_irq_cnt == 1U, "[FAILED] Number of triggered interrupts is incorrect!");
 
-  GPIO_Event = 0U;
-  GPIO_Pin   = 0U;
-  IRQ_cnt    = 0U;
+  gpio_event   = 0U;
+  gpio_pin     = 0U;
+  gpio_irq_cnt = 0U;
 
   // Call SetEventTrigger function (with trigger on falling edge) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetEventTrigger(GPIO_PIN_UNDER_TEST, ARM_GPIO_TRIGGER_FALLING_EDGE) == ARM_DRIVER_OK);
 
-  // Trigger Falling Edge with external low resistor
-  Driver_Auxiliary_Pin(0U);
+  // Trigger Falling Edge with drive Auxiliary Pin low
+  AuxiliaryPinSetOutput(0U);
 
-  osDelay(100);
+  (void)osDelay(2U);
 
   // Assert that event ARM_GPIO_EVENT_FALLING_EDGE was signaled
-  TEST_ASSERT_MESSAGE(GPIO_Event == ARM_GPIO_EVENT_FALLING_EDGE, "[FAILED] Event ARM_GPIO_EVENT_FALLING_EDGE was not signaled!");
+  TEST_ASSERT_MESSAGE(gpio_event == ARM_GPIO_EVENT_FALLING_EDGE, "[FAILED] Event ARM_GPIO_EVENT_FALLING_EDGE was not signaled!");
 
   // Assert that pin GPIO_PIN_UNDER_TEST was triggered
-  TEST_ASSERT_MESSAGE(GPIO_Pin == GPIO_PIN_UNDER_TEST, "[FAILED] Pin GPIO_PIN_UNDER_TEST was not triggered!");
+  TEST_ASSERT_MESSAGE(gpio_pin == GPIO_PIN_UNDER_TEST, "[FAILED] Pin GPIO_PIN_UNDER_TEST was not triggered!");
 
   // Assert that number of interrupts was correct
-  TEST_ASSERT_MESSAGE(IRQ_cnt == 1U, "[FAILED] Number of triggered interrupts is incorrect!");
+  TEST_ASSERT_MESSAGE(gpio_irq_cnt == 1U, "[FAILED] Number of triggered interrupts is incorrect!");
 
-  GPIO_Event = 0U;
-  GPIO_Pin   = 0U;
-  IRQ_cnt    = 0U;
+  gpio_event   = 0U;
+  gpio_pin     = 0U;
+  gpio_irq_cnt = 0U;
 
   // Call SetEventTrigger function (with trigger on either edge) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetEventTrigger(GPIO_PIN_UNDER_TEST, ARM_GPIO_TRIGGER_EITHER_EDGE) == ARM_DRIVER_OK);
 
-  // Trigger Rising Edge with external low resistor
-  Driver_Auxiliary_Pin(1U);
+  // Trigger Rising Edge with drive Auxiliary Pin high
+  AuxiliaryPinSetOutput(1U);
 
-  osDelay(100);
+  (void)osDelay(2U);
 
   // Assert that event ARM_GPIO_EVENT_RISING_EDGE or ARM_GPIO_EVENT_EITHER_EDGE was signaled
-  TEST_ASSERT_MESSAGE((GPIO_Event == ARM_GPIO_EVENT_RISING_EDGE) ||
-                      (GPIO_Event == ARM_GPIO_EVENT_EITHER_EDGE), "[FAILED] Event ARM_GPIO_EVENT_RISING_EDGE was not signaled!");
+  TEST_ASSERT_MESSAGE((gpio_event == ARM_GPIO_EVENT_RISING_EDGE) ||
+                      (gpio_event == ARM_GPIO_EVENT_EITHER_EDGE), "[FAILED] Event ARM_GPIO_EVENT_RISING_EDGE was not signaled!");
 
   // Assert that pin GPIO_PIN_UNDER_TEST was triggered
-  TEST_ASSERT_MESSAGE(GPIO_Pin == GPIO_PIN_UNDER_TEST, "[FAILED] Pin GPIO_PIN_UNDER_TEST was not triggered!");
+  TEST_ASSERT_MESSAGE(gpio_pin == GPIO_PIN_UNDER_TEST, "[FAILED] Pin GPIO_PIN_UNDER_TEST was not triggered!");
 
   // Assert that number of interrupts was correct
-  TEST_ASSERT_MESSAGE(IRQ_cnt == 1U, "[FAILED] Number of triggered interrupts is incorrect!");
+  TEST_ASSERT_MESSAGE(gpio_irq_cnt == 1U, "[FAILED] Number of triggered interrupts is incorrect!");
 
-  GPIO_Event = 0U;
-  GPIO_Pin   = 0U;
-  IRQ_cnt    = 0U;
+  gpio_event   = 0U;
+  gpio_pin     = 0U;
+  gpio_irq_cnt = 0U;
 
-  // Trigger Falling Edge with external low resistor
-  Driver_Auxiliary_Pin(0U);
+  // Trigger Falling Edge with drive Auxiliary Pin low
+  AuxiliaryPinSetOutput(0U);
 
-  osDelay(100);
+  (void)osDelay(2U);
 
   // Assert that event ARM_GPIO_EVENT_FALLING_EDGE or ARM_GPIO_EVENT_EITHER_EDGE was signaled
-  TEST_ASSERT_MESSAGE((GPIO_Event == ARM_GPIO_EVENT_FALLING_EDGE) ||
-                      (GPIO_Event == ARM_GPIO_EVENT_EITHER_EDGE ), "[FAILED] Event ARM_GPIO_EVENT_FALLING_EDGE was not signaled!");
+  TEST_ASSERT_MESSAGE((gpio_event == ARM_GPIO_EVENT_FALLING_EDGE) ||
+                      (gpio_event == ARM_GPIO_EVENT_EITHER_EDGE ), "[FAILED] Event ARM_GPIO_EVENT_FALLING_EDGE was not signaled!");
 
   // Assert that pin GPIO_PIN_UNDER_TEST was triggered
-  TEST_ASSERT_MESSAGE(GPIO_Pin == GPIO_PIN_UNDER_TEST, "[FAILED] Pin GPIO_PIN_UNDER_TEST was not triggered!");
+  TEST_ASSERT_MESSAGE(gpio_pin == GPIO_PIN_UNDER_TEST, "[FAILED] Pin GPIO_PIN_UNDER_TEST was not triggered!");
 
   // Assert that number of interrupts was correct
-  TEST_ASSERT_MESSAGE(IRQ_cnt == 1U, "[FAILED] Number of triggered interrupts is incorrect!");
+  TEST_ASSERT_MESSAGE(gpio_irq_cnt == 1U, "[FAILED] Number of triggered interrupts is incorrect!");
 
-  GPIO_Event = 0U;
-  GPIO_Pin   = 0U;
-  IRQ_cnt    = 0U;
+  gpio_event   = 0U;
+  gpio_pin     = 0U;
+  gpio_irq_cnt = 0U;
 
   // Call SetEventTrigger function (with disabled triggering) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetEventTrigger(GPIO_PIN_UNDER_TEST, ARM_GPIO_TRIGGER_NONE) == ARM_DRIVER_OK);
 
-  // Trigger Rising/Falling Edge with external low resistor
-  Driver_Auxiliary_Pin(1U);
-  Driver_Auxiliary_Pin(0U);
+  // Trigger Rising/Falling Edge with drive Auxiliary Pin high/low
+  AuxiliaryPinSetOutput(1U);
+  AuxiliaryPinSetOutput(0U);
 
-  osDelay(100);
+  (void)osDelay(2U);
 
   // Assert that no event was triggered
-  TEST_ASSERT_MESSAGE(GPIO_Event== 0U, "[FAILED] Event was triggered!");
+  TEST_ASSERT_MESSAGE(gpio_event== 0U, "[FAILED] Event was triggered!");
 
   // Assert that no pin was triggered
-  TEST_ASSERT_MESSAGE( GPIO_Pin == 0U, "[FAILED] Pin GPIO_PIN_UNDER_TEST was triggered!");
+  TEST_ASSERT_MESSAGE(gpio_pin == 0U, "[FAILED] Pin GPIO_PIN_UNDER_TEST was triggered!");
 
   // Assert that number of interrupts was correct 
-  TEST_ASSERT_MESSAGE(IRQ_cnt == 0U, "[FAILED] Interrupt was triggered!");
+  TEST_ASSERT_MESSAGE(gpio_irq_cnt == 0U, "[FAILED] Interrupt was triggered!");
 
   // Call SetEventTrigger function (with trigger on either edge) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetEventTrigger(GPIO_PIN_UNDER_TEST, ARM_GPIO_TRIGGER_EITHER_EDGE) == ARM_DRIVER_OK);
 
-  GPIO_Event = 0U;
-  GPIO_Pin   = 0U;
-  IRQ_cnt    = 0U;
+  gpio_event   = 0U;
+  gpio_pin     = 0U;
+  gpio_irq_cnt = 0U;
 
   __disable_irq();
 
-  // Trigger Rising Edge with external low resistor
-  Driver_Auxiliary_Pin(1U);
-  Driver_Auxiliary_Pin(0U);
+  // Trigger Rising/Falling Edge with drive Auxiliary Pin high/low
+  AuxiliaryPinSetOutput(1U);
+  AuxiliaryPinSetOutput(0U);
 
   __enable_irq();
 
-  osDelay(100);
+  (void)osDelay(2U);
 
   // Assert that event ARM_GPIO_EVENT_RISING_EDGE/ARM_GPIO_EVENT_FALLING_EDGE was signaled
-  TEST_ASSERT_MESSAGE(GPIO_Event & (ARM_GPIO_EVENT_RISING_EDGE | ARM_GPIO_EVENT_FALLING_EDGE) ||
-                     (GPIO_Event == ARM_GPIO_EVENT_EITHER_EDGE), "[FAILED] Both Event ARM_GPIO_EVENT_RISING_EDGE and ARM_GPIO_EVENT_FALLING_EDGE was not signaled!");
+  TEST_ASSERT_MESSAGE(gpio_event & (ARM_GPIO_EVENT_RISING_EDGE | ARM_GPIO_EVENT_FALLING_EDGE) ||
+                     (gpio_event == ARM_GPIO_EVENT_EITHER_EDGE), "[FAILED] Both Event ARM_GPIO_EVENT_RISING_EDGE and ARM_GPIO_EVENT_FALLING_EDGE was not signaled!");
 
   // Assert that pin GPIO_PIN_UNDER_TEST was triggered
-  TEST_ASSERT_MESSAGE(GPIO_Pin == GPIO_PIN_UNDER_TEST, "[FAILED] Pin GPIO_PIN_UNDER_TEST was not triggered!");
+  TEST_ASSERT_MESSAGE(gpio_pin == GPIO_PIN_UNDER_TEST, "[FAILED] Pin GPIO_PIN_UNDER_TEST was not triggered!");
 
   // Assert that number of interrupts was correct
-  TEST_ASSERT_MESSAGE((IRQ_cnt == 1U) || (IRQ_cnt == 2U), "[FAILED] Number of triggered interrupts is incorrect!");
+  TEST_ASSERT_MESSAGE((gpio_irq_cnt == 1U) || (gpio_irq_cnt == 2U), "[FAILED] Number of triggered interrupts is incorrect!");
 
-  // Disable interrupts
-  drv->SetEventTrigger(GPIO_PIN_UNDER_TEST, ARM_GPIO_TRIGGER_NONE);
-
-  // Disable pin
-  Disable_Auxiliary_Pin();
+  // Uninitialize Auxiliary Pin and Pin Under Test
+  AuxiliaryPinUninit();
+  PinUnderTestUninit();
 }
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
@@ -475,55 +668,46 @@ void GPIO_SetEventTrigger (void) {
 The function \b GPIO_SetOutput verifies the \b GPIO_SetOutput function.
 
 Testing sequence:
-  - Functional compliance:
-    - Setup pin
-    - Set Direction as Output
-    - Set SetOutputMode as Push-Pull
-    - Set Output level LO
-    - Get Output
-    - Set Output level HI
-    - Get Output
-    - Set SetOutputMode as Open-Drain
-    - Set Output level LO
-    - Get Output
+  - Call SetDirection function (with output direction) and assert that it returned ARM_DRIVER_OK status
+  - Call SetOutputMode function (with push-pull mode) and assert that it returned ARM_DRIVER_OK status
+  - Configure Auxiliary Pin as input
+  - Call SetOutput function and set output level low
+  - Read Auxiliary Pin input level and assert that it returned 0
+  - Call SetOutput function and set output level high
+  - Read Auxiliary Pin input level and assert that it returned 1
 */
 void GPIO_SetOutput (void) {
-  uint32_t input;
+  if (PinUnderTestIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
+  if (AuxiliaryPinIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
 
-  if (IsPinUnderTestAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
-
-  // Setup pin
-  drv->Setup(GPIO_PIN_UNDER_TEST, NULL);
-
-  // Set Direction as Output
+  // Call SetDirection function (with output direction) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetDirection(GPIO_PIN_UNDER_TEST, ARM_GPIO_OUTPUT) == ARM_DRIVER_OK);
 
-  // Set SetOutputMode as Push-Pull
+  // Call SetOutputMode function (with push-pull mode) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetOutputMode(GPIO_PIN_UNDER_TEST, ARM_GPIO_PUSH_PULL) == ARM_DRIVER_OK);
 
-  // Set Output Level LO
+  // Configure Auxiliary Pin as input
+  AuxiliaryPinConfigInput();
+
+  // Call SetOutput function and set output level low
   drv->SetOutput(GPIO_PIN_UNDER_TEST, 0U);
 
-  // Get Output
-  input = drv->GetInput(GPIO_PIN_UNDER_TEST);
-  TEST_ASSERT(input == 0U);
+  (void)osDelay(2U);
 
-  // Set Output Level HI
+  // Read Auxiliary Pin input level and assert that it returned 0
+  TEST_ASSERT(AuxiliaryPinGetInput() == 0U);
+
+  // Call SetOutput function and set output level high
   drv->SetOutput(GPIO_PIN_UNDER_TEST, 1U);
 
-  // Get Output
-  input = drv->GetInput(GPIO_PIN_UNDER_TEST);
-  TEST_ASSERT(input == 1U);
+  (void)osDelay(2U);
 
-  // Set SetOutputMode as Open-Drain
-  TEST_ASSERT(drv->SetOutputMode(GPIO_PIN_UNDER_TEST, ARM_GPIO_OPEN_DRAIN) == ARM_DRIVER_OK);
+  // Read Auxiliary Pin input level and assert that it returned 1
+  TEST_ASSERT(AuxiliaryPinGetInput() == 1U);
 
-  // Set Output Level LO
-  drv->SetOutput(GPIO_PIN_UNDER_TEST, 0U);
-
-  // Get Output
-  input = drv->GetInput(GPIO_PIN_UNDER_TEST);
-  TEST_ASSERT(input == 0U);
+  // Uninitialize Auxiliary Pin and Pin Under Test
+  AuxiliaryPinUninit();
+  PinUnderTestUninit();
 }
 
 /*=======0=========1=========2=========3=========4=========5=========6=========7=========8=========9=========0=========1====*/
@@ -533,101 +717,36 @@ void GPIO_SetOutput (void) {
 The function \b GPIO_GetInput verifies the \b GPIO_GetInput function.
 
 Testing sequence:
-  - Functional compliance:
-    - Setup pins
-    - Set Direction as Input
-    - Set no Pull-Up/Down resistor (Disabled)
-    - External low resistor as Pull-Down
-    - Get Output
-    - External low resistor as Pull-Up
-    - Get Output
-    - Set Pull-Down resistor
-    - Get Output
-    - External low resistor as Pull-Up
-    - Get Output
-    - Set Pull-Up resistor
-    - Get Output
-    - External low resistor as Pull-Down
-    - Get Output
+  - Call SetDirection function (with input direction) and assert that it returned ARM_DRIVER_OK status
+  - Drive Auxiliary Pin low
+  - Read Pin Under Test input level and assert that it returned 0
+  - Drive Auxiliary Pin high
+  - Read Pin Under Test input level and assert that it returned 1
 */
 void GPIO_GetInput (void) {
-  uint32_t input;
 
-  if (IsPinUnderTestAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
-  if (IsAuxiliaryPinAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
+  if (PinUnderTestIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
+  if (AuxiliaryPinIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
+  
+  // Drive Auxiliary Pin low
+  AuxiliaryPinSetOutput(0U);
 
-  // Setup pins
-  drv->Setup(GPIO_PIN_UNDER_TEST, NULL);
-  drv->Setup(GPIO_PIN_AUX, NULL);
+ (void)osDelay(2U);
 
-  // Set Direction as Input
-  TEST_ASSERT(drv->SetDirection(GPIO_PIN_UNDER_TEST, ARM_GPIO_INPUT) == ARM_DRIVER_OK);
+  // Read Pin Under Test input level and assert that it returned 0
+  TEST_ASSERT(PinUnderTestGetInput() == 0U);
 
-  // Set no Pull-Up/Down resistor (Disabled)
-  TEST_ASSERT(drv->SetPullResistor(GPIO_PIN_UNDER_TEST, ARM_GPIO_PULL_NONE) == ARM_DRIVER_OK);
+  // Drive Auxiliary Pin high
+  AuxiliaryPinSetOutput(1U);
 
-  // External low resistor as Pull-Down
-  Driver_Auxiliary_Pin(0U);
+ (void)osDelay(2U);
 
-  osDelay(100);
+  // Read Pin Under Test input level and assert that it returned 1
+  TEST_ASSERT(PinUnderTestGetInput() == 1U);
 
-  // Get Output
-  input = drv->GetInput(GPIO_PIN_UNDER_TEST);
-  TEST_ASSERT(input == 0U);
-
-  // External low resistor as Pull-Up
-  Driver_Auxiliary_Pin(1U);
-
-  osDelay(100);
-
-  // Get Output
-  input = drv->GetInput(GPIO_PIN_UNDER_TEST);
-  TEST_ASSERT(input == 1U);
-
-  // Disable pin
-  Disable_Auxiliary_Pin();
-
-  // Set Pull-Down resistor
-  TEST_ASSERT(drv->SetPullResistor(GPIO_PIN_UNDER_TEST, ARM_GPIO_PULL_DOWN) == ARM_DRIVER_OK);
-
-  osDelay(100);
-
-  // Get Output
-  input = drv->GetInput(GPIO_PIN_UNDER_TEST);
-  TEST_ASSERT(input == 0U);
-
-  // External low resistor as Pull-Up
-  Driver_Auxiliary_Pin(1U);
-
-  osDelay(100);
-
-  // Get Output
-  input = drv->GetInput(GPIO_PIN_UNDER_TEST);
-  TEST_ASSERT(input == 1U);
-
-  // Disable pin
-  Disable_Auxiliary_Pin();
-
-  // Set Pull-Up resistor
-  TEST_ASSERT(drv->SetPullResistor(GPIO_PIN_UNDER_TEST, ARM_GPIO_PULL_UP) == ARM_DRIVER_OK);
-
-  osDelay(100);
-
-  // Get Output
-  input = drv->GetInput(GPIO_PIN_UNDER_TEST);
-  TEST_ASSERT(input == 1U);
-
-  // External low resistor as Pull-Down
-  Driver_Auxiliary_Pin(0U);
-
-  osDelay(100);
-
-  // Get Output
-  input = drv->GetInput(GPIO_PIN_UNDER_TEST);
-  TEST_ASSERT(input == 0U);
-
-  // Disable pin
-  Disable_Auxiliary_Pin();
+  // Uninitialize Auxiliary Pin and Pin Under Test
+  AuxiliaryPinUninit();
+  PinUnderTestUninit();
 }
 
 /**
