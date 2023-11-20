@@ -47,12 +47,13 @@ static volatile uint8_t         gpio_irq_cnt;
 // Local functions
 static void     GPIO_DrvEvent           (ARM_GPIO_Pin_t pin, uint32_t event);
 static int32_t  PinUnderTestIsAvailable (void);
+static void     PinUnderTestInit        (void);
 static void     PinUnderTestUninit      (void);
-static uint32_t PinUnderTestGetInput    (void);
 static int32_t  AuxiliaryPinIsAvailable (void);
+static void     AuxiliaryPinInit        (void);
 static void     AuxiliaryPinUninit      (void);
 static void     AuxiliaryPinConfigInput (void);
-static uint32_t AuxiliaryPinGetInput    (void);
+static void     AuxiliaryPinConfigOutput(void);
 static void     AuxiliaryPinSetOutput   (uint32_t val);
 static void     AuxiliaryPinDisable     (void);
 
@@ -91,6 +92,17 @@ static int32_t PinUnderTestIsAvailable (void) {
 }
 
 /*
+  \fn            static void PinUnderTestInit (void)
+  \brief         Initialize Pin Under Test.
+  \param[in]     none
+  \return        none
+*/
+static void PinUnderTestInit (void) {
+
+  drv->Setup(GPIO_PIN_UNDER_TEST, NULL);
+}
+
+/*
   \fn            static void PinUnderTestUninit (void)
   \brief         Uninitialize Pin Under Test.
   \param[in]     none
@@ -100,17 +112,6 @@ static void PinUnderTestUninit (void) {
 
   drv->SetDirection(GPIO_PIN_UNDER_TEST, ARM_GPIO_INPUT);
   drv->Setup       (GPIO_PIN_UNDER_TEST, NULL);
-}
-
-/*
-  \fn            static void PinUnderTestGetInput (void)
-  \brief         Get Pin Under Test input level (0 or 1).
-  \param[in]     none
-  \return        intput level
-*/
-static uint32_t PinUnderTestGetInput (void) {
-
-  return (drv->GetInput(GPIO_PIN_UNDER_TEST));
 }
 
 /*
@@ -129,6 +130,17 @@ static int32_t AuxiliaryPinIsAvailable (void) {
     TEST_MESSAGE("[FAILED] Auxiliary Pin is not available!");
     return EXIT_FAILURE;
   }
+}
+
+/*
+  \fn            static void AuxiliaryPinInit (void)
+  \brief         Initialize Auxiliary Pin.
+  \param[in]     none
+  \return        none
+*/
+static void AuxiliaryPinInit (void) {
+
+  drv->Setup(GPIO_PIN_AUX, NULL);
 }
 
 /*
@@ -155,14 +167,15 @@ static void AuxiliaryPinConfigInput (void) {
 }
 
 /*
-  \fn            static void AuxiliaryPinGetInput (void)
-  \brief         Get Auxiliary Pin input level (0 or 1).
+  \fn            static void AuxiliaryPinConfigOutput (void)
+  \brief         Configure Auxiliary Pin as Output with Push Pull Output Mode.
   \param[in]     none
-  \return        intput level
+  \return        none
 */
-static uint32_t AuxiliaryPinGetInput (void) {
+static void AuxiliaryPinConfigOutput (void) {
 
-  return (drv->GetInput(GPIO_PIN_AUX));
+  drv->SetOutputMode(GPIO_PIN_AUX, ARM_GPIO_PUSH_PULL);
+  drv->SetDirection (GPIO_PIN_AUX, ARM_GPIO_OUTPUT);
 }
 
 /*
@@ -173,15 +186,13 @@ static uint32_t AuxiliaryPinGetInput (void) {
 */
 static void AuxiliaryPinSetOutput (uint32_t val) {
 
-  drv->SetDirection(GPIO_PIN_AUX, ARM_GPIO_OUTPUT);
-  drv->SetOutputMode(GPIO_PIN_AUX, ARM_GPIO_PUSH_PULL);
   drv->SetPullResistor(GPIO_PIN_AUX, ARM_GPIO_PULL_NONE);
   drv->SetOutput(GPIO_PIN_AUX, val);
 }
 
 /*
   \fn            static void AuxiliaryPinDisable (void)
-  \brief         Auxiliary Pin Disable.
+  \brief         Auxiliary Pin Disable set Pin as Input with Open Drain Output Mode.
   \param[in]     none
   \return        intput level
 */
@@ -238,12 +249,16 @@ void GPIO_Setup (void) {
 
   if (PinUnderTestIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
 
+  // Initialize Pin Under Test
+  PinUnderTestInit();
+
   // Call Setup function (without callback specified) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->Setup(GPIO_PIN_UNDER_TEST, NULL) == ARM_DRIVER_OK);
 
   // Call Setup function (with callback specified) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->Setup(GPIO_PIN_UNDER_TEST, GPIO_DrvEvent) == ARM_DRIVER_OK);
 
+  // Uninitialize Pin Under Test
   PinUnderTestUninit();
 }
 
@@ -258,6 +273,7 @@ The function \b GPIO_SetDirection verifies the \b SetDirection function.
 
 Testing sequence:
   - Call SetDirection function (with input direction) and assert that it returned ARM_DRIVER_OK status
+  - Configure Auxiliary Pin as output
   - Drive Auxiliary Pin low
   - Read Pin Under Test input level and assert that it returned 0
   - Drive Auxiliary Pin high
@@ -274,8 +290,15 @@ void GPIO_SetDirection (void) {
   if (PinUnderTestIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
   if (AuxiliaryPinIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
 
+  // Initialize Auxiliary Pin and Pin Under Test
+  PinUnderTestInit();
+  AuxiliaryPinInit();
+
   // Call SetDirection function (with input direction) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetDirection(GPIO_PIN_UNDER_TEST, ARM_GPIO_INPUT) == ARM_DRIVER_OK);
+
+  // Configure Auxiliary Pin as output
+  AuxiliaryPinConfigOutput();
 
   // Drive Auxiliary Pin low
   AuxiliaryPinSetOutput(0U);
@@ -283,7 +306,7 @@ void GPIO_SetDirection (void) {
  (void)osDelay(2U);
 
   // Read Pin Under Test input level and assert that it returned 0
-  TEST_ASSERT(PinUnderTestGetInput() == 0U);
+  TEST_ASSERT(drv->GetInput(GPIO_PIN_UNDER_TEST) == 0U);
 
   // Drive Auxiliary Pin high
   AuxiliaryPinSetOutput(1U);
@@ -291,9 +314,10 @@ void GPIO_SetDirection (void) {
  (void)osDelay(2U);
 
   // Read Pin Under Test input level and assert that it returned 1
-  TEST_ASSERT(PinUnderTestGetInput() == 1U);
+  TEST_ASSERT(drv->GetInput(GPIO_PIN_UNDER_TEST) == 1U);
 
-  AuxiliaryPinConfigInput();            // Configure Auxiliary Pin as input
+  // Configure Auxiliary Pin as input
+  AuxiliaryPinConfigInput();
 
   // Call SetDirection function (with output direction) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetDirection(GPIO_PIN_UNDER_TEST, ARM_GPIO_OUTPUT) == ARM_DRIVER_OK);
@@ -304,7 +328,7 @@ void GPIO_SetDirection (void) {
  (void)osDelay(2U);
 
   // Read Auxiliary Pin input level and assert that it returned 0
-  TEST_ASSERT(AuxiliaryPinGetInput() == 0U);
+  TEST_ASSERT(drv->GetInput(GPIO_PIN_AUX) == 0U);
 
   // Call SetOutput function and set output level high
   drv->SetOutput(GPIO_PIN_UNDER_TEST, 1U);
@@ -312,7 +336,7 @@ void GPIO_SetDirection (void) {
  (void)osDelay(2U);
 
   // Read Auxiliary Pin input level and assert that it returned 1
-  TEST_ASSERT(AuxiliaryPinGetInput() == 1U);
+  TEST_ASSERT(drv->GetInput(GPIO_PIN_AUX) == 1U);
 
   // Disable Auxiliary Pin
   AuxiliaryPinDisable();
@@ -348,6 +372,10 @@ void GPIO_SetOutputMode (void) {
   if (PinUnderTestIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
   if (AuxiliaryPinIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
 
+  // Initialize Auxiliary Pin and Pin Under Test
+  PinUnderTestInit();
+  AuxiliaryPinInit();
+
   // Call SetDirection function (with output direction) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetDirection(GPIO_PIN_UNDER_TEST, ARM_GPIO_OUTPUT) == ARM_DRIVER_OK);
 
@@ -363,7 +391,7 @@ void GPIO_SetOutputMode (void) {
   (void)osDelay(2U);
 
   // Read Auxiliary Pin input level and assert that it returned 0
-  TEST_ASSERT(AuxiliaryPinGetInput() == 0U);
+  TEST_ASSERT(drv->GetInput(GPIO_PIN_AUX) == 0U);
 
   // Call SetOutput function and set output level high
   drv->SetOutput(GPIO_PIN_UNDER_TEST, 1U);
@@ -371,7 +399,7 @@ void GPIO_SetOutputMode (void) {
   (void)osDelay(2U);
 
   // Read Auxiliary Pin input level and assert that it returned 1
-  TEST_ASSERT(AuxiliaryPinGetInput() == 1U);
+  TEST_ASSERT(drv->GetInput(GPIO_PIN_AUX) == 1U);
 
   // Call SetOutputMode function (with open-drain mode) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetOutputMode(GPIO_PIN_UNDER_TEST, ARM_GPIO_OPEN_DRAIN) == ARM_DRIVER_OK);
@@ -382,7 +410,10 @@ void GPIO_SetOutputMode (void) {
   (void)osDelay(2U);
 
   // Read Auxiliary Pin input level and assert that it returned 0
-  TEST_ASSERT(AuxiliaryPinGetInput() == 0U);
+  TEST_ASSERT(drv->GetInput(GPIO_PIN_AUX) == 0U);
+
+  // Disable Auxiliary Pin
+  AuxiliaryPinDisable();
 
   // Uninitialize Auxiliary Pin and Pin Under Test
   AuxiliaryPinUninit();
@@ -401,23 +432,30 @@ The function \b GPIO_SetPullResistor verifies the \b SetPullResistor function.
 Testing sequence:
   - Call SetDirection function (with input direction) and assert that it returned ARM_DRIVER_OK status
   - Call SetPullResistor function (with none resistor) and assert that it returned ARM_DRIVER_OK status
+  - Configure Auxiliary Pin as output
   - Drive Auxiliary Pin low
   - Read Pin Under Test input level and assert that it returned 0
   - Drive Auxiliary Pin high
   - Read Pin Under Test input level and assert that it returned 1
   - Call SetPullResistor function (with pull-down resistor) and assert that it returned ARM_DRIVER_OK status
   - Read Pin Under Test input level and assert that it returned 0
-  - Drive Auxiliary Pin high
+  - Configure Auxiliary Pin as output 
+ - Drive Auxiliary Pin high
   - Read Pin Under Test input level and assert that it returned 1
   - Call SetPullResistor function (with pull-up resistor) and assert that it returned ARM_DRIVER_OK status
   - Read Pin Under Test input level and assert that it returned 1
+  - Configure Auxiliary Pin as output
   - Drive Auxiliary Pin low
-  - Read Pin Under Test input level and assert that it returned 0   
+  - Read Pin Under Test input level and assert that it returned 0 
 */
 void GPIO_SetPullResistor (void) {
 
   if (PinUnderTestIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
   if (AuxiliaryPinIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
+
+  // Initialize Auxiliary Pin and Pin Under Test
+  PinUnderTestInit();
+  AuxiliaryPinInit();
 
   // Call SetDirection function (with input direction) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetDirection(GPIO_PIN_UNDER_TEST, ARM_GPIO_INPUT) == ARM_DRIVER_OK);
@@ -425,13 +463,16 @@ void GPIO_SetPullResistor (void) {
   // Call SetPullResistor function (with none resistor) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetPullResistor(GPIO_PIN_UNDER_TEST, ARM_GPIO_PULL_NONE) == ARM_DRIVER_OK);
 
+  // Configure Auxiliary Pin as output
+  AuxiliaryPinConfigOutput();
+
   // Drive Auxiliary Pin low
   AuxiliaryPinSetOutput(0U);
 
   (void)osDelay(2U);
 
   // Read Pin Under Test input level and assert that it returned 0
-  TEST_ASSERT(PinUnderTestGetInput() == 0U);
+  TEST_ASSERT(drv->GetInput(GPIO_PIN_UNDER_TEST) == 0U);
 
   // Drive Auxiliary Pin high
   AuxiliaryPinSetOutput(1U);
@@ -439,7 +480,7 @@ void GPIO_SetPullResistor (void) {
   (void)osDelay(2U);
 
   // Read Pin Under Test input level and assert that it returned 1
-  TEST_ASSERT(PinUnderTestGetInput() == 1U);
+  TEST_ASSERT(drv->GetInput(GPIO_PIN_UNDER_TEST) == 1U);
 
   // Disable Auxiliary Pin
   AuxiliaryPinDisable();
@@ -450,7 +491,10 @@ void GPIO_SetPullResistor (void) {
   (void)osDelay(2U);
 
   // Read Pin Under Test input level and assert that it returned 0
-  TEST_ASSERT(PinUnderTestGetInput() == 0U);
+  TEST_ASSERT(drv->GetInput(GPIO_PIN_UNDER_TEST) == 0U);
+
+  // Configure Auxiliary Pin as output
+  AuxiliaryPinConfigOutput();
 
   // Drive Auxiliary Pin high
   AuxiliaryPinSetOutput(1U);
@@ -458,7 +502,7 @@ void GPIO_SetPullResistor (void) {
   (void)osDelay(2U);
 
   // Read Pin Under Test input level and assert that it returned 1
-  TEST_ASSERT(PinUnderTestGetInput() == 1U);
+  TEST_ASSERT(drv->GetInput(GPIO_PIN_UNDER_TEST) == 1U);
 
   // Disable Auxiliary Pin
   AuxiliaryPinDisable();
@@ -469,7 +513,10 @@ void GPIO_SetPullResistor (void) {
   (void)osDelay(2U);
 
   // Read Pin Under Test input level and assert that it returned 1
-  TEST_ASSERT(PinUnderTestGetInput() == 1U);
+  TEST_ASSERT(drv->GetInput(GPIO_PIN_UNDER_TEST) == 1U);
+
+  // Configure Auxiliary Pin as output
+  AuxiliaryPinConfigOutput();
 
   // Drive Auxiliary Pin low
   AuxiliaryPinSetOutput(0U);
@@ -477,7 +524,7 @@ void GPIO_SetPullResistor (void) {
   (void)osDelay(2U);
 
   // Read Pin Under Test input level and assert that it returned 0
-  TEST_ASSERT(PinUnderTestGetInput() == 0U);
+  TEST_ASSERT(drv->GetInput(GPIO_PIN_UNDER_TEST) == 0U);
 
   // Disable Auxiliary Pin
   AuxiliaryPinDisable();
@@ -498,6 +545,7 @@ The function \b GPIO_SetEventTrigger verifies the \b SetEventTrigger function.
 
 Testing sequence:
   - Call Setup function (with callback specified) and assert that it returned ARM_DRIVER_OK status
+  - Configure Auxiliary Pin as output
   - Drive Auxiliary Pin low
   - Call SetEventTrigger function (with trigger on rising-edge) and assert that it returned ARM_DRIVER_OK status
   - Trigger Rising Edge with drive Auxiliary Pin high
@@ -518,8 +566,15 @@ void GPIO_SetEventTrigger (void) {
   if (PinUnderTestIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
   if (AuxiliaryPinIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
 
+  // Initialize Auxiliary Pin and Pin Under Test
+  PinUnderTestInit();
+  AuxiliaryPinInit();
+
   // Call Setup function (with callback specified) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->Setup(GPIO_PIN_UNDER_TEST, GPIO_DrvEvent) == ARM_DRIVER_OK);
+
+  // Configure Auxiliary Pin as output
+  AuxiliaryPinConfigOutput();
 
   // Drive Auxiliary Pin low
   AuxiliaryPinSetOutput(0U);
@@ -656,6 +711,9 @@ void GPIO_SetEventTrigger (void) {
   // Assert that number of interrupts was correct
   TEST_ASSERT_MESSAGE((gpio_irq_cnt == 1U) || (gpio_irq_cnt == 2U), "[FAILED] Number of triggered interrupts is incorrect!");
 
+  // Disable Auxiliary Pin
+  AuxiliaryPinDisable();
+
   // Uninitialize Auxiliary Pin and Pin Under Test
   AuxiliaryPinUninit();
   PinUnderTestUninit();
@@ -680,6 +738,10 @@ void GPIO_SetOutput (void) {
   if (PinUnderTestIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
   if (AuxiliaryPinIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
 
+  // Initialize Auxiliary Pin and Pin Under Test
+  PinUnderTestInit();
+  AuxiliaryPinInit();
+
   // Call SetDirection function (with output direction) and assert that it returned ARM_DRIVER_OK status
   TEST_ASSERT(drv->SetDirection(GPIO_PIN_UNDER_TEST, ARM_GPIO_OUTPUT) == ARM_DRIVER_OK);
 
@@ -695,7 +757,7 @@ void GPIO_SetOutput (void) {
   (void)osDelay(2U);
 
   // Read Auxiliary Pin input level and assert that it returned 0
-  TEST_ASSERT(AuxiliaryPinGetInput() == 0U);
+  TEST_ASSERT(drv->GetInput(GPIO_PIN_AUX) == 0U);
 
   // Call SetOutput function and set output level high
   drv->SetOutput(GPIO_PIN_UNDER_TEST, 1U);
@@ -703,7 +765,10 @@ void GPIO_SetOutput (void) {
   (void)osDelay(2U);
 
   // Read Auxiliary Pin input level and assert that it returned 1
-  TEST_ASSERT(AuxiliaryPinGetInput() == 1U);
+  TEST_ASSERT(drv->GetInput(GPIO_PIN_AUX) == 1U);
+
+  // Disable Auxiliary Pin
+  AuxiliaryPinDisable();
 
   // Uninitialize Auxiliary Pin and Pin Under Test
   AuxiliaryPinUninit();
@@ -718,6 +783,7 @@ The function \b GPIO_GetInput verifies the \b GPIO_GetInput function.
 
 Testing sequence:
   - Call SetDirection function (with input direction) and assert that it returned ARM_DRIVER_OK status
+  - Configure Auxiliary Pin as output
   - Drive Auxiliary Pin low
   - Read Pin Under Test input level and assert that it returned 0
   - Drive Auxiliary Pin high
@@ -727,14 +793,21 @@ void GPIO_GetInput (void) {
 
   if (PinUnderTestIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
   if (AuxiliaryPinIsAvailable() != EXIT_SUCCESS) { TEST_FAIL(); return; }
-  
+
+  // Initialize Auxiliary Pin and Pin Under Test
+  PinUnderTestInit();
+  AuxiliaryPinInit();
+
+  // Configure Auxiliary Pin as output
+  AuxiliaryPinConfigOutput();
+
   // Drive Auxiliary Pin low
   AuxiliaryPinSetOutput(0U);
 
  (void)osDelay(2U);
 
   // Read Pin Under Test input level and assert that it returned 0
-  TEST_ASSERT(PinUnderTestGetInput() == 0U);
+  TEST_ASSERT(drv->GetInput(GPIO_PIN_UNDER_TEST) == 0U);
 
   // Drive Auxiliary Pin high
   AuxiliaryPinSetOutput(1U);
@@ -742,7 +815,10 @@ void GPIO_GetInput (void) {
  (void)osDelay(2U);
 
   // Read Pin Under Test input level and assert that it returned 1
-  TEST_ASSERT(PinUnderTestGetInput() == 1U);
+  TEST_ASSERT(drv->GetInput(GPIO_PIN_UNDER_TEST) == 1U);
+
+  // Disable Auxiliary Pin
+  AuxiliaryPinDisable();
 
   // Uninitialize Auxiliary Pin and Pin Under Test
   AuxiliaryPinUninit();
