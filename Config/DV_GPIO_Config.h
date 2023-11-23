@@ -66,14 +66,14 @@
 // </h>
 
 #define DRV_GPIO                        0
-#define GPIO_PIN_UNDER_TEST             0
-#define GPIO_PIN_AUX                    0
-#define GPIO_SETUP_EN                   1
-#define GPIO_SET_DIRECTION_EN           1
-#define GPIO_SET_OUTPUT_MODE_EN         1
-#define GPIO_SET_PULL_RESISTOR_EN       1
-#define GPIO_SET_EVENT_TRIGGER_EN       1
-#define GPIO_SET_OUTPUT_EN              1
-#define GPIO_GET_INPUT_EN               1
+#define GPIO_CFG_PIN_UNDER_TEST         0
+#define GPIO_CFG_PIN_AUX                0
+#define GPIO_TC_SETUP_EN                1
+#define GPIO_TC_SET_DIRECTION_EN        1
+#define GPIO_TC_SET_OUTPUT_MODE_EN      1
+#define GPIO_TC_SET_PULL_RESISTOR_EN    1
+#define GPIO_TC_SET_EVENT_TRIGGER_EN    1
+#define GPIO_TC_SET_OUTPUT_EN           1
+#define GPIO_TC_GET_INPUT_EN            1
 
 #endif /* DV_GPIO_CONFIG_H_ */

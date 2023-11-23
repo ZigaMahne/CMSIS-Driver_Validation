@@ -408,13 +408,13 @@ static TEST_CASE TC_List_WiFi[] = {
 
 #ifdef  RTE_CMSIS_DV_GPIO
 static TEST_CASE TC_List_GPIO[] = {
-  TCD ( GPIO_Setup,                     GPIO_SETUP_EN                   ),
-  TCD ( GPIO_SetDirection,              GPIO_SET_DIRECTION_EN           ),
-  TCD ( GPIO_SetOutputMode,             GPIO_SET_OUTPUT_MODE_EN         ),
-  TCD ( GPIO_SetPullResistor,           GPIO_SET_PULL_RESISTOR_EN       ),
-  TCD ( GPIO_SetEventTrigger,           GPIO_SET_EVENT_TRIGGER_EN       ),
-  TCD ( GPIO_SetOutput,                 GPIO_SET_OUTPUT_EN              ),
-  TCD ( GPIO_GetInput,                  GPIO_GET_INPUT_EN               )
+  TCD ( GPIO_Setup,                     GPIO_TC_SETUP_EN                ),
+  TCD ( GPIO_SetDirection,              GPIO_TC_SET_DIRECTION_EN        ),
+  TCD ( GPIO_SetOutputMode,             GPIO_TC_SET_OUTPUT_MODE_EN      ),
+  TCD ( GPIO_SetPullResistor,           GPIO_TC_SET_PULL_RESISTOR_EN    ),
+  TCD ( GPIO_SetEventTrigger,           GPIO_TC_SET_EVENT_TRIGGER_EN    ),
+  TCD ( GPIO_SetOutput,                 GPIO_TC_SET_OUTPUT_EN           ),
+  TCD ( GPIO_GetInput,                  GPIO_TC_GET_INPUT_EN            )
 };
 #endif
 
