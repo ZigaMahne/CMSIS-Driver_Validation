@@ -103,7 +103,7 @@
      reconfiguration and preserve active transfers. Record hardware verification for
      later testing.
    - Size the C runtime heap for both buffers, alignment and other allocations.
-     The reference 4096-byte buffers require two 4100-byte allocations.Provide RTOS
+     The reference 4096-byte buffers require two 4100-byte allocations. Provide RTOS
      object memory and sufficient application and Server thread stacks.
    - Review startup code to ensure both allocation results are checked before use
      and both RX and TX buffers are initialized. Record actual allocation success as
