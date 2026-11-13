@@ -36,7 +36,7 @@
    - Ask the user to choose if several valid routes remain.
    - If the USART DUT project is unavailable in the workspace, ask the user for
      its path. If not provided, refer to the validation pack documentation,
-     define the required signals and voltage levels, and mark DUT connector mapping
+     define the required signals and voltage levels and mark DUT connector mapping
      and compatibility checks for later completion.
    - Document the planned Server Tx -> DUT Rx, Server Rx <- DUT Tx, common GND and
      any extra clock/modem/flow-control connections. Check documented I/O voltage
@@ -65,7 +65,7 @@
    - Resolve CMSIS, CMSIS-RTX and CMSIS-Compiler dependencies.
    - Select the USART implementation and verify `Driver_USART<n>` against the physical
      peripheral and pins; driver and peripheral numbers need not match.
-   - Determine the actual USART clock source, frequency, and oversampling
+   - Determine the actual USART clock source, frequency and oversampling
      configuration. Use these when assessing supported baud rates.
    - Check documented driver and hardware support for the required modes, formats,
      callbacks, transfers, counts/aborts and break/modem operations. Compare these
@@ -109,7 +109,7 @@
      and both RX and TX buffers are initialized. Record actual allocation success as
      unverified until hardware execution.
    - Verify that the resolved CMSIS memory map matches the board and linker
-     layout, explicitly declare any external flash/RAM missing from the packs, and
+     layout, explicitly declare any external flash/RAM missing from the packs and
      ensure each programmed flash region uses the correct programming algorithm.
    - Configure the Server application to call USART_Server_Start() once from an
      RTOS thread within the existing app_main flow, after board initialization.
@@ -127,7 +127,7 @@
      - USART_SERVER_BUF_SIZE = 4096
      - USART_SERVER_CMD_TIMEOUT = 100
    - Implement USART_Server_HW.c module, including DCD/RI hooks with correct GPIO
-     clocks, inactive startup levels, and active-low signaling. If unused,
+     clocks, inactive startup levels and active-low signaling. If unused,
      retain the weak fallback or equivalent accurate capability handling,
      empty template overrides can falsely advertise support.
    - Keep command default server setting in in Source/USART_Server.c file:
@@ -139,7 +139,7 @@
      - Baudrate: 115200
    - Enable only features supported by the selected USART peripheral and board.
    - Preserve the command protocol: 32-byte zero-padded commands, a 16-byte GET VER
-     response, and a 32-byte GET CAP response.
+     response and a 32-byte GET CAP response.
      SET COM selects transfer settings, XFER must restore command settings afterward.
    - Verify GET CAP against actual driver/hardware support. Control-based format/baud
      probing does not prove reliable operation over board wiring. Validate the agreed
@@ -147,7 +147,7 @@
    - Check how the driver and HAL behave after rejected Control calls. Unsupported
      settings must not prevent subsequent valid configuration or communication.
    - Check DUT requirements: USART_CFG_TEST_MODE = 1, USART_CFG_SRV_MODE matching
-     USART_SERVER_MODE, compatible command timing, and tests supported by both ends
+     USART_SERVER_MODE, compatible command timing and tests supported by both ends
      and wiring.
    - Result: Configured USART_Server_Config.h file and documented scope for later
      hardware testing.
@@ -164,7 +164,7 @@
      leave some HALs busy or disabled. Review recovery and record the hardware check.
    - Propagate configuration and RX/TX enable failures. Check restoration of command
      settings after GET CAP and XFER, plus recovery after incomplete commands,
-     timeouts, and aborts. Record runtime recovery as unverified until tested.
+     timeouts and aborts. Record runtime recovery as unverified until tested.
    - Check the selected DUT receive sequence separately for each command.
      Distinguish any wait before reception is armed from the receive timeout. The
      reply must start after receiver readiness and finish before the applicable

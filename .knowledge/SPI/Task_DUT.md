@@ -31,7 +31,7 @@
    - Ask the user to choose if several valid routes remain.
    - If the SPI Server project is unavailable in the workspace, ask the user for
      its path. If not provided, refer to the validation pack documentation,
-     define the required signals and voltage levels, and mark Server creation,
+     define the required signals and voltage levels and mark Server creation,
      connector mapping and compatibility checks for later completion.
    - Document the planned SCK-to-SCK, MOSI-to-MOSI, MISO-to-MISO, SS-to-SS and
      common GND connections. For command exchange the DUT is master and the
@@ -158,7 +158,7 @@
      communication.
      For later troubleshooting, check the driver mapping, Server readiness and
      command speed if the Server does not respond. For data mismatches, check
-     SS pull-up, wiring and signal quality, and consider reducing the bus speed.
+     SS pull-up, wiring and signal quality and consider reducing the bus speed.
    - Result: A successfully built DUT project with supporting files; hardware
      execution and communication remain unverified.
 

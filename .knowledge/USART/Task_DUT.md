@@ -6,7 +6,7 @@
 - [Reference pack documentation](https://github.com/ARM-software/CMSIS-Driver_Validation)
   - Template: portable project structure
   - Examples/USART: configuration and connection example
-- Treat `<board_given_by_user>` as the DUT target.  
+- Treat `<board_given_by_user>` as the DUT target.
 - The DUT project contains the USART driver tests and runs the CMSIS-Driver 
   Validation suite. A separate project runs a compatible USART Server on dedicated
   hardware to perform extensive communication tests.
@@ -15,7 +15,7 @@
   or unresolved configuration facts or multiple valid choices.
 - Prepare the DUT project using an available CMSIS template, example project, or 
   board layer. Ensure the project includes the basic hardware configuration
- (startup, clock initialization, memory configuration), USART peripheral support
+  (startup, clock initialization, memory configuration), USART peripheral support
   and is ready to execute the validation application from provided app_main entry.
 - Use CMSIS Developer Assistant throughout the entire workflow, following workspace
   instructions and relevant documentation.
@@ -29,7 +29,7 @@
    - Ask the user to choose if several valid routes remain.
    - If the USART Server project is unavailable in the workspace, ask the user for
      its path. If not provided, refer to the validation pack documentation,
-     define the required signals and voltage levels, and mark server creation and
+     define the required signals and voltage levels and mark server creation and
      connector mapping for later completion.
    - Document the planned DUT Tx -> Server Rx, DUT Rx <- Server Tx, common GND and
      any extra clock/modem/flow-control connections. Check documented I/O voltage
@@ -45,7 +45,7 @@
    - Verify that the selected packs support the identified board/revision, MCU/core.
    - Check the workspace first, then selected packs, to use available template,
      example and board layer for the required startup, system/clock initialization, 
-     linker/memory configuration, and board initialization support.
+     linker/memory configuration and board initialization support.
      Use the available components to prepare the board layer.
      Use the add-board-layer skill when applicable.
    - Reuse the board layer from the pack without modification. Update it only when
@@ -98,14 +98,14 @@
 ### 5. Configure USART validation:
    - Update the DV_USART_Config.h configuration file provided by the CMSIS Driver
      Validation USART component to match the DUT hardware and driver capabilities.
-   - Set DRV_USART to the verified driver instance, USART_CFG_TEST_MODE to 1, and
+   - Set DRV_USART to the verified driver instance, USART_CFG_TEST_MODE to 1 and
      USART_CFG_SRV_MODE for asynchronous communication.
    - Specify matching server settings: asynchronous, 115200 baud, 8 data bits, no
      parity, 1 stop bit and no flow control.
    - Set data-exchange defaults separately to those same settings; use CPOL = 0 and
      CPHA = 0 as defaults for synchronous tests.
    - Set the minimum and maximum baud rates based on the DUT clock configuration,
-     driver capabilities, documented USART Server support, and planned wiring.
+     driver capabilities, documented USART Server support and planned wiring.
    - Enable only features supported by the selected USART peripheral and board.
    - Check documented driver/server support. If server capabilities are not yet known,
      document the required capabilities and checks to complete before hardware testing.
@@ -121,8 +121,8 @@
    - Check the resolved target, driver instance, USART Server test mode, RTOS
      integration and firmware/debugger semihosting configuration from project settings.
    - Record the context, build outcome and remaining limitations.
-   - Result: A successfully built DUT project with supporting files; hardware
-     execution and communication remain unverified.
+   - Result: A successfully built DUT project with supporting files.
+     Hardware execution and communication remain unverified.
 
 ### 7. Deliver concise project documentation:
    - Use the USART example README.md from the CMSIS-Driver_Validation pack as the
